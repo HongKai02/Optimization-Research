@@ -1,0 +1,1720 @@
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  sets
+   2  crops /'wheat', 'corn', 'sugarbeets'/
+   3  scenarios /lo,mid,hi/
+   4  ;
+   5   
+   6  table yield(crops,scenarios) ’possible outcomes for demand’
+   7              lo  mid hi
+   8  wheat       2   2.5 3
+   9  corn        2.4 3   3.6
+  10  sugarbeets  16  20  24
+  11  ;
+  12   
+  13  parameter alpha 'confidence level for CVaR';
+  14  alpha = [1/3];
+  15   
+  16   
+  17  parameter probability(scenarios) ’probability of each scenario materializing’
+  18  /
+  19  lo [1/3]
+  20  mid [1/3]
+  21  hi [1/3]
+  22  /;
+  23   
+  24  parameter cost(crops) 'cost to plant per acre'
+  25  /
+  26  wheat 150,
+  27  corn 230,
+  28  sugarbeets 260
+  29  /;
+  30   
+  31  *----------------------------------------------------------------------- * Form the Benders master problem *-----------------------------------------------------------------------
+  32  ************************** Sets and Variables Needed to Perform Benders **************************
+  33  sets iter ’max Benders iterations’ /iter1*iter2500/,
+  34       dyniter(iter) ’dynamic subset’,
+  35       dynscen(scenarios) 'dynamic subset of scenarios',
+  36       curiter(iter) 'dynamic subset of iter',
+  37       curscen(scenarios) 'scenario that the problem should look at'
+  38  ;
+  39   
+  40  parameters oldgamma(iter),
+  41            oldX(crops, iter),
+  42            oldU(scenarios, iter),
+  43            pi(scenarios, crops, iter),
+  44            phi(scenarios, iter);
+  45   
+  46   
+  47  ************************** Initial Master Problem **************************
+  48  positive variables x(crops) '# of acres of land to allocate to wheat, corn, and sugarbeets';
+  49   
+  50  free variables zmaster ’objective variable of master problem’,
+  51                 theta ’extra term in master obj’,
+  52                 gamma 'VaR'
+  53  ;
+  54   
+  55  equations masterobj ’master objective function’,
+  56            plantamount 'constraint on first stage variables'
+  57  ;
+  58   
+  59  masterobj..
+  60      zmaster =e= sum(crops, cost(crops) * x(crops)) + gamma + theta;
+  61   
+  62  plantamount..
+  63      sum(crops, x(crops)) =l= 500;
+  64   
+  65  gamma.lo = -5000000000;
+  66  theta.lo = -5000000000;
+  67   
+  68  model initialmasterproblem /masterobj, plantamount/;
+  69   
+  70  ************************** Subproblem **************************
+  71  positive variables p(crops, scenarios) '# of tons of each type of crops to sell in each scenario',
+  72                     y(crops, scenarios) '# of tons of wheat/corn to buy in each scenario',
+  73                     u(scenarios) 'auxiliary variables for reformulation of CVaR',
+  74                     subX(crops)
+  75  ;
+  76   
+  77  free variables zsub,
+  78                 subgamma;
+  79   
+  80  equations subobj(scenarios),
+  81            CVaRConstraint(scenarios),
+  82            wheatfeeding(scenarios),
+  83            cornfeeding(scenarios),
+  84            sellingBeets(scenarios),
+  85            setx(crops, iter),
+  86            setgamma,
+  87            CVaRConstraintDebug(scenarios)
+  88            ;
+  89   
+  90  * Lots of equations here are indexed by scenarios, but there should only be one active scenario at a time.
+  91  subobj(curscen)..
+  92      zsub =e= [1/(1-alpha)] * (probability(curscen) * u(curscen));
+  93   
+  94  CVaRConstraint(curscen)..
+  95      u(curscen) =g= (238 * y('wheat', curscen) + 210 * y('corn', curscen) - 170 * p('wheat', curscen) - 150 * p('corn', curscen) - 36 * p('sugarbeets', curscen)) - subgamma;
+  96   
+  97  CVaRConstraintDebug(curscen)..
+  98      u(curscen) =g= (238 * y('wheat', curscen) + 210 * y('corn', curscen) - 170 * p('wheat', curscen) - 150 * p('corn', curscen) - 36 * p('sugarbeets', curscen));
+  99   
+ 100  wheatfeeding(curscen)..
+ 101      yield('wheat', curscen) * subX('wheat') + y('wheat', curscen) - p('wheat', curscen) =g= 200;
+ 102   
+ 103  cornfeeding(curscen)..
+ 104      yield('corn', curscen) * subX('corn') + y('corn', curscen) - p('corn', curscen) =g= 240;
+ 105   
+ 106  sellingBeets(curscen)..
+ 107      p('sugarbeets', curscen) =l= yield('sugarbeets', curscen) * subX('sugarbeets');
+ 108   
+ 109  setx(crops, curiter)..
+ 110      subX(crops) =e= oldX(crops, curiter);
+ 111   
+ 112  setgamma(curiter)..
+ 113      subgamma =e= oldgamma(curiter);
+ 114   
+ 115  model subproblem /subobj, CVaRConstraint, wheatfeeding, cornfeeding, sellingBeets, setx, setgamma/;
+ 116   
+ 117  ************************** Master Problem **************************
+ 118  equation cutcon(iter);
+ 119   
+ 120  cutcon(dyniter)..
+ 121      theta =g= sum(scenarios, [1/(1-alpha)] * (probability(scenarios) * oldU(scenarios, dyniter))) +
+ 122                sum(crops, sum(scenarios, pi(scenarios, crops, dyniter) * (x(crops) - oldx(crops, dyniter)))) +
+ 123                sum(scenarios, phi(scenarios, dyniter) * (gamma - oldgamma(dyniter)));
+ 124   
+ 125   
+ 126  model masterproblem /masterobj, plantamount, cutcon/;
+ 127   
+ 128  ************************** Benders Algorithm **************************
+ 129  *
+ 130  * Step 1: Solve master problem without cuts
+ 131  *
+ 132  dyniter(iter) = NO;
+ 133  curiter(iter) = NO;
+ 134  curscen(scenarios) = NO;
+ 135  solve initialmasterproblem minimizing zmaster using lp;
+ 136  display zmaster.l;
+ 137   
+ 138  scalar lowerbound /-INF/;
+ 139  scalar upperbound /INF/;
+ 140  parameter objsub(scenarios);
+ 141  scalar objmaster;
+ 142  objmaster = zmaster.l - theta.l;
+ 143  display objmaster;
+ 144   
+ 145  * Save the x and gamma values
+ 146  oldX(crops, 'iter1') = x.l(crops);
+ 147  oldgamma('iter1') = gamma.l;
+ 148   
+ 149   
+ 150  oldU(scenarios, 'iter1') = 0;
+ 151  pi(scenarios, crops, 'iter1') = 0;
+ 152  phi(scenarios, 'iter1') = 0;
+ 153   
+ 154  option limrow = 0;
+ 155  option limcol = 0;
+ 156  subproblem.solprint = 0;
+ 157  masterproblem.solprint = 0;
+ 158   
+ 159  scalar counter /0/;
+ 160      loop(iter,
+ 161  *If not first iteration, run master problem
+ 162      if (ord(iter) <> 1,
+ 163  * Step 4: Solve masterproblem, and go back to step 2
+ 164   
+ 165          solve masterproblem minimizing zmaster using lp;
+ 166  * Save values from master problem
+ 167          oldX(crops, iter) = x.l(crops);
+ 168          oldgamma(iter) = gamma.l;
+ 169          lowerbound = zmaster.l;
+ 170          objmaster = zmaster.l-theta.l;
+ 171          display lowerbound, x.l;
+ 172  * Update curiter
+ 173          counter = counter + 1;
+ 174      );
+ 175   
+ 176  *
+ 177  * Step 2: Solve subproblems
+ 178  *
+ 179      dyniter(iter) = yes;
+ 180      curiter(iter) = yes;
+ 181      loop(scenarios,
+ 182          curscen(scenarios) = yes;
+ 183          solve subproblem minimizing zsub using lp;
+ 184          display x.l;
+ 185          display p.l, y.l;
+ 186  * Save values from this subproblem
+ 187          oldU(curscen, iter) = u.l(curscen);
+ 188          pi(scenarios, crops, iter) = setx.m(crops, iter);
+ 189          phi(scenarios, iter) = setgamma.m(iter);
+ 190          objsub(scenarios) = zsub.l;
+ 191          curscen(scenarios) = no;
+ 192      );
+ 193   
+ 194  upperbound = min(upperbound, objmaster + [1/(1-alpha)] * sum(scenarios, probability(scenarios) * oldU(scenarios, iter)));
+ 195   
+ 196  *
+ 197  * Step 3: Check for convergence
+ 198  *
+ 199      display lowerbound,upperbound;
+ 200      if (abs(upperbound - lowerbound) < 10,
+ 201      break;
+ 202      );
+ 203  curiter(iter) = no;
+ 204   
+ 205  );
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE initialmasterproblem Using LP From line 135
+
+
+---- masterobj  =E=  ’master objective function’
+
+masterobj..  - 150*x(wheat) - 230*x(corn) - 260*x(sugarbeets) + zmaster - theta - gamma =E= 0 ; (LHS = 0)
+     
+
+---- plantamount  =L=  constraint on first stage variables
+
+plantamount..  x(wheat) + x(corn) + x(sugarbeets) =L= 500 ; (LHS = 0)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE initialmasterproblem Using LP From line 135
+
+
+---- x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+x(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -150       masterobj
+        1       plantamount
+
+x(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -230       masterobj
+        1       plantamount
+
+x(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -260       masterobj
+        1       plantamount
+
+
+---- zmaster  ’objective variable of master problem’
+
+zmaster
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       masterobj
+
+
+---- theta  ’extra term in master obj’
+
+theta
+                (.LO, .L, .UP, .M = -5000000000, 0, +INF, 0)
+       -1       masterobj
+
+
+---- gamma  VaR
+
+gamma
+                (.LO, .L, .UP, .M = -5000000000, 0, +INF, 0)
+       -1       masterobj
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE initialmasterproblem Using LP From line 135
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 5.000E+02] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+09, 5.000E+09] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 2.600E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE initialmasterproblem Using LP From line 135
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           2     SINGLE EQUATIONS            2
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS             9
+
+
+GENERATION TIME      =        0.033 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 6
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE initialmasterproblem Using LP From line 135
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   initialmasterproblem   OBJECTIVE  zmaster
+     TYPE    LP                     DIRECTION  MINIMIZE
+     SOLVER  CPLEX                  FROM LINE  135
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE     -10000000000.0000
+
+ RESOURCE USAGE, LIMIT          0.001 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.00 ticks)
+
+
+Optimal solution found
+Objective:  -10000000000.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU masterobj           .              .              .             1.0000      
+---- EQU plantamou~        -INF             .           500.0000          .          
+
+  masterobj  ’master objective function’
+  plantamount  constraint on first stage variables
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF          150.0000      
+corn                .              .            +INF          230.0000      
+sugarbeets          .              .            +INF          260.0000      
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zmaster           -INF      -1.00000E+10        +INF             .          
+---- VAR theta        -5.000000E+9   -5.000000E+9        +INF            1.0000      
+---- VAR gamma        -5.000000E+9   -5.000000E+9        +INF            1.0000      
+
+  zmaster  ’objective variable of master problem’
+  theta  ’extra term in master obj’
+  gamma  VaR
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 7
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    136 VARIABLE zmaster.L             =  -1.0000E+10  ’objective variable of master problem’
+
+----    143 PARAMETER objmaster            =  -5.00000E+9  
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 8
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 9
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 10
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE       2500049000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:   2500049000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 11
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo
+
+wheat     200.000
+corn      240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 12
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 13
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 14
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE       2500049000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:   2500049000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 15
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid
+
+wheat     200.000     200.000
+corn      240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 16
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 17
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 18
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE       2500049000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:   2500049000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 19
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    199 PARAMETER lowerbound           =         -INF  
+            PARAMETER upperbound           =  2.500147E+9  
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 20
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 165
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+09, 5.000E+09] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 21
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 165
+
+
+LOOPS                                 iter   iter2
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            3
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            14
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 22
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 165
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  165
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE      -1666798666.6667
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         3    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:  -1666798666.666666
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 23
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    171 PARAMETER lowerbound           =  -1.66680E+9  
+
+----    171 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 24
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 25
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 26
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 27
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo
+
+sugarbeets    8000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 28
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 29
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 30
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 31
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid
+
+sugarbeets    8000.000   10000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 32
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+09] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 33
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 34
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 35
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    199 PARAMETER lowerbound           =  -1.66680E+9  
+            PARAMETER upperbound           =  2.500147E+9  
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 36
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 165
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+09, 5.000E+09] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03] - Zero values observed as well
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 37
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 165
+
+
+LOOPS                                 iter   iter3
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            4
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            17
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 38
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 165
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  165
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE          -132000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:      -132000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 39
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    171 PARAMETER lowerbound           =  -132000.000  
+
+----    171 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 40
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 41
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 42
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE            36000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:        36000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 43
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 44
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 45
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 46
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 47
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 48
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 49
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 50
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 51
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    199 PARAMETER lowerbound           =  -132000.000  
+            PARAMETER upperbound           =   -96000.000  
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 52
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 165
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+09, 5.000E+09] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03] - Zero values observed as well
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 53
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 165
+
+
+LOOPS                                 iter   iter4
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            5
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            22
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 54
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 165
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  165
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE           -96000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         1    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:       -96000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 55
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    171 PARAMETER lowerbound           =   -96000.000  
+
+----    171 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 56
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 57
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 58
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE            18000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:        18000.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 59
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 60
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 61
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 62
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 63
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 64
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 183
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 65
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 183
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 66
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 183
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  183
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/09/24 01:19:09 Page 67
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    184 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    185 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    185 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    199 PARAMETER lowerbound           =   -96000.000  
+            PARAMETER upperbound           =   -96000.000  
+
+
+EXECUTION TIME       =        0.443 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVaR Benders V2.gms
+Output     /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVaR Benders V2.lst

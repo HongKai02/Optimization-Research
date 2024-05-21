@@ -1,0 +1,1579 @@
+B 3 C o m p i l a t i o n
+B 237 E x e c u t i o n
+I 237 scenarios
+I 244 scenSubsetSize
+I 245 probability
+B 253 Range Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 264 Model Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 282 Solution Report     SOLVE initialmasterproblem Using LP From line 158
+F 315 masterobj
+F 316 plantamount
+G 321 x
+G 331 zmaster
+G 332 theta
+G 333 gamma
+B 345 E x e c u t i o n
+I 347 zmaster
+I 349 objmaster
+B 353 Range Statistics    SOLVE subproblem Using LP From line 200
+B 364 Model Statistics    SOLVE subproblem Using LP From line 200
+B 386 Solution Report     SOLVE subproblem Using LP From line 200
+B 423 E x e c u t i o n
+I 423 x
+I 429 p
+I 434 y
+I 443 gamma
+I 444 theta
+I 446 lowerbound
+I 447 upperbound
+I 448 counter
+I 449 oldU
+I 456 oldY
+I 465 oldP
+B 472 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 483 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 503 Solution Report     SOLVE masterproblem Using LP From line 182
+B 540 E x e c u t i o n
+I 542 lowerbound
+I 543 x
+I 548 oldY
+I 557 oldP
+I 561 pi
+I 570 phi
+I 578 gamma
+I 579 theta
+B 583 Range Statistics    SOLVE subproblem Using LP From line 200
+B 594 Model Statistics    SOLVE subproblem Using LP From line 200
+B 616 Solution Report     SOLVE subproblem Using LP From line 200
+B 653 E x e c u t i o n
+I 653 x
+I 659 p
+I 666 y
+I 675 gamma
+I 676 theta
+I 678 lowerbound
+I 679 upperbound
+I 680 counter
+I 681 oldU
+I 688 oldY
+I 696 oldP
+B 706 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 717 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 737 Solution Report     SOLVE masterproblem Using LP From line 182
+B 774 E x e c u t i o n
+I 776 lowerbound
+I 777 x
+I 782 oldY
+I 790 oldP
+I 797 pi
+I 806 phi
+I 814 gamma
+I 815 theta
+B 819 Range Statistics    SOLVE subproblem Using LP From line 200
+B 830 Model Statistics    SOLVE subproblem Using LP From line 200
+B 852 Solution Report     SOLVE subproblem Using LP From line 200
+B 889 E x e c u t i o n
+I 889 x
+I 895 p
+I 902 y
+I 911 gamma
+I 912 theta
+I 914 lowerbound
+I 915 upperbound
+I 916 counter
+I 917 oldU
+I 924 oldY
+I 932 oldP
+I 939 scenarios
+I 945 scenSubsetSize
+I 946 probability
+B 954 Range Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 965 Model Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 983 Solution Report     SOLVE initialmasterproblem Using LP From line 158
+F 1016 masterobj
+F 1017 plantamount
+G 1022 x
+G 1032 zmaster
+G 1033 theta
+G 1034 gamma
+B 1046 E x e c u t i o n
+I 1048 zmaster
+I 1050 objmaster
+B 1054 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1065 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1087 Solution Report     SOLVE subproblem Using LP From line 200
+B 1124 E x e c u t i o n
+I 1124 x
+I 1130 p
+I 1135 y
+I 1144 gamma
+I 1145 theta
+B 1149 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1160 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1182 Solution Report     SOLVE subproblem Using LP From line 200
+B 1219 E x e c u t i o n
+I 1219 x
+I 1225 p
+I 1230 y
+I 1239 gamma
+I 1240 theta
+I 1242 lowerbound
+I 1243 upperbound
+I 1244 counter
+I 1245 oldU
+I 1253 oldY
+I 1263 oldP
+B 1273 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 1284 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 1304 Solution Report     SOLVE masterproblem Using LP From line 182
+B 1341 E x e c u t i o n
+I 1343 lowerbound
+I 1344 x
+I 1349 oldY
+I 1359 oldP
+I 1366 pi
+I 1378 phi
+I 1387 gamma
+I 1388 theta
+B 1392 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1403 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1425 Solution Report     SOLVE subproblem Using LP From line 200
+B 1462 E x e c u t i o n
+I 1462 x
+I 1468 p
+I 1475 y
+I 1484 gamma
+I 1485 theta
+B 1489 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1500 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1522 Solution Report     SOLVE subproblem Using LP From line 200
+B 1559 E x e c u t i o n
+I 1559 x
+I 1565 p
+I 1572 y
+I 1580 gamma
+I 1581 theta
+I 1583 lowerbound
+I 1584 upperbound
+I 1585 counter
+I 1586 oldU
+I 1594 oldY
+I 1604 oldP
+B 1616 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 1627 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 1647 Solution Report     SOLVE masterproblem Using LP From line 182
+B 1684 E x e c u t i o n
+I 1686 lowerbound
+I 1687 x
+I 1692 oldY
+I 1702 oldP
+I 1711 pi
+I 1723 phi
+I 1732 gamma
+I 1733 theta
+B 1737 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1748 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1770 Solution Report     SOLVE subproblem Using LP From line 200
+B 1807 E x e c u t i o n
+I 1807 x
+I 1813 p
+I 1820 y
+I 1828 gamma
+I 1829 theta
+B 1833 Range Statistics    SOLVE subproblem Using LP From line 200
+B 1844 Model Statistics    SOLVE subproblem Using LP From line 200
+B 1866 Solution Report     SOLVE subproblem Using LP From line 200
+B 1903 E x e c u t i o n
+I 1903 x
+I 1909 p
+I 1916 y
+I 1924 gamma
+I 1925 theta
+I 1927 lowerbound
+I 1928 upperbound
+I 1929 counter
+I 1930 oldU
+I 1938 oldY
+I 1948 oldP
+B 1959 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 1970 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 1990 Solution Report     SOLVE masterproblem Using LP From line 182
+B 2027 E x e c u t i o n
+I 2029 lowerbound
+I 2030 x
+I 2035 oldY
+I 2045 oldP
+I 2053 pi
+I 2065 phi
+I 2074 gamma
+I 2075 theta
+B 2079 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2090 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2112 Solution Report     SOLVE subproblem Using LP From line 200
+B 2149 E x e c u t i o n
+I 2149 x
+I 2155 p
+I 2163 y
+I 2172 gamma
+I 2173 theta
+B 2177 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2188 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2210 Solution Report     SOLVE subproblem Using LP From line 200
+B 2247 E x e c u t i o n
+I 2247 x
+I 2253 p
+I 2261 y
+I 2270 gamma
+I 2271 theta
+I 2273 lowerbound
+I 2274 upperbound
+I 2275 counter
+I 2276 oldU
+I 2284 oldY
+I 2294 oldP
+B 2307 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 2318 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 2338 Solution Report     SOLVE masterproblem Using LP From line 182
+B 2375 E x e c u t i o n
+I 2377 lowerbound
+I 2378 x
+I 2383 oldY
+I 2393 oldP
+I 2403 pi
+I 2415 phi
+I 2424 gamma
+I 2425 theta
+B 2429 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2440 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2462 Solution Report     SOLVE subproblem Using LP From line 200
+B 2499 E x e c u t i o n
+I 2499 x
+I 2505 p
+I 2513 y
+I 2521 gamma
+I 2522 theta
+B 2526 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2537 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2559 Solution Report     SOLVE subproblem Using LP From line 200
+B 2596 E x e c u t i o n
+I 2596 x
+I 2602 p
+I 2610 y
+I 2618 gamma
+I 2619 theta
+I 2621 lowerbound
+I 2622 upperbound
+I 2623 counter
+I 2624 oldU
+I 2632 oldY
+I 2642 oldP
+B 2655 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 2666 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 2686 Solution Report     SOLVE masterproblem Using LP From line 182
+B 2723 E x e c u t i o n
+I 2725 lowerbound
+I 2726 x
+I 2731 oldY
+I 2741 oldP
+I 2751 pi
+I 2763 phi
+I 2772 gamma
+I 2773 theta
+B 2777 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2788 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2810 Solution Report     SOLVE subproblem Using LP From line 200
+B 2847 E x e c u t i o n
+I 2847 x
+I 2853 p
+I 2861 y
+I 2869 gamma
+I 2870 theta
+B 2874 Range Statistics    SOLVE subproblem Using LP From line 200
+B 2885 Model Statistics    SOLVE subproblem Using LP From line 200
+B 2907 Solution Report     SOLVE subproblem Using LP From line 200
+B 2944 E x e c u t i o n
+I 2944 x
+I 2950 p
+I 2958 y
+I 2966 gamma
+I 2967 theta
+I 2969 lowerbound
+I 2970 upperbound
+I 2971 counter
+I 2972 oldU
+I 2980 oldY
+I 2990 oldP
+I 3000 scenarios
+I 3006 scenSubsetSize
+I 3007 probability
+B 3015 Range Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 3026 Model Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 3044 Solution Report     SOLVE initialmasterproblem Using LP From line 158
+F 3077 masterobj
+F 3078 plantamount
+G 3083 x
+G 3093 zmaster
+G 3094 theta
+G 3095 gamma
+B 3107 E x e c u t i o n
+I 3109 zmaster
+I 3111 objmaster
+B 3115 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3126 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3148 Solution Report     SOLVE subproblem Using LP From line 200
+B 3185 E x e c u t i o n
+I 3185 x
+I 3191 p
+I 3199 y
+I 3208 gamma
+I 3209 theta
+B 3213 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3224 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3246 Solution Report     SOLVE subproblem Using LP From line 200
+B 3283 E x e c u t i o n
+I 3283 x
+I 3289 p
+I 3294 y
+I 3303 gamma
+I 3304 theta
+B 3308 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3319 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3341 Solution Report     SOLVE subproblem Using LP From line 200
+B 3378 E x e c u t i o n
+I 3378 x
+I 3384 p
+I 3389 y
+I 3398 gamma
+I 3399 theta
+I 3401 lowerbound
+I 3402 upperbound
+I 3403 counter
+I 3404 oldU
+I 3413 oldY
+I 3425 oldP
+B 3438 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 3449 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 3469 Solution Report     SOLVE masterproblem Using LP From line 182
+B 3506 E x e c u t i o n
+I 3508 lowerbound
+I 3509 x
+I 3514 oldY
+I 3526 oldP
+I 3536 pi
+I 3551 phi
+I 3561 gamma
+I 3562 theta
+B 3566 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3577 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3599 Solution Report     SOLVE subproblem Using LP From line 200
+B 3636 E x e c u t i o n
+I 3636 x
+I 3642 p
+I 3649 y
+I 3658 gamma
+I 3659 theta
+B 3663 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3674 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3696 Solution Report     SOLVE subproblem Using LP From line 200
+B 3733 E x e c u t i o n
+I 3733 x
+I 3739 p
+I 3746 y
+I 3755 gamma
+I 3756 theta
+B 3760 Range Statistics    SOLVE subproblem Using LP From line 200
+B 3771 Model Statistics    SOLVE subproblem Using LP From line 200
+B 3793 Solution Report     SOLVE subproblem Using LP From line 200
+B 3830 E x e c u t i o n
+I 3830 x
+I 3836 p
+I 3843 y
+I 3851 gamma
+I 3852 theta
+I 3854 lowerbound
+I 3855 upperbound
+I 3856 counter
+I 3857 oldU
+I 3866 oldY
+I 3878 oldP
+B 3892 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 3903 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 3923 Solution Report     SOLVE masterproblem Using LP From line 182
+B 3960 E x e c u t i o n
+I 3962 lowerbound
+I 3963 x
+I 3968 oldY
+I 3980 oldP
+I 3991 pi
+I 4006 phi
+I 4016 gamma
+I 4017 theta
+B 4021 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4032 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4054 Solution Report     SOLVE subproblem Using LP From line 200
+B 4091 E x e c u t i o n
+I 4091 x
+I 4097 p
+I 4104 y
+I 4112 gamma
+I 4113 theta
+B 4117 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4128 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4150 Solution Report     SOLVE subproblem Using LP From line 200
+B 4187 E x e c u t i o n
+I 4187 x
+I 4193 p
+I 4200 y
+I 4208 gamma
+I 4209 theta
+B 4213 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4224 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4246 Solution Report     SOLVE subproblem Using LP From line 200
+B 4283 E x e c u t i o n
+I 4283 x
+I 4289 p
+I 4296 y
+I 4304 gamma
+I 4305 theta
+I 4307 lowerbound
+I 4308 upperbound
+I 4309 counter
+I 4310 oldU
+I 4319 oldY
+I 4331 oldP
+B 4345 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 4356 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 4376 Solution Report     SOLVE masterproblem Using LP From line 182
+B 4413 E x e c u t i o n
+I 4415 lowerbound
+I 4416 x
+I 4421 oldY
+I 4433 oldP
+I 4444 pi
+I 4459 phi
+I 4469 gamma
+I 4470 theta
+B 4474 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4485 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4507 Solution Report     SOLVE subproblem Using LP From line 200
+B 4544 E x e c u t i o n
+I 4544 x
+I 4550 p
+I 4557 y
+I 4565 gamma
+I 4566 theta
+B 4570 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4581 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4603 Solution Report     SOLVE subproblem Using LP From line 200
+B 4640 E x e c u t i o n
+I 4640 x
+I 4646 p
+I 4653 y
+I 4661 gamma
+I 4662 theta
+B 4666 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4677 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4699 Solution Report     SOLVE subproblem Using LP From line 200
+B 4736 E x e c u t i o n
+I 4736 x
+I 4742 p
+I 4749 y
+I 4757 gamma
+I 4758 theta
+I 4760 lowerbound
+I 4761 upperbound
+I 4762 counter
+I 4763 oldU
+I 4772 oldY
+I 4784 oldP
+B 4798 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 4809 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 4829 Solution Report     SOLVE masterproblem Using LP From line 182
+B 4866 E x e c u t i o n
+I 4868 lowerbound
+I 4869 x
+I 4874 oldY
+I 4886 oldP
+I 4897 pi
+I 4912 phi
+I 4922 gamma
+I 4923 theta
+B 4927 Range Statistics    SOLVE subproblem Using LP From line 200
+B 4938 Model Statistics    SOLVE subproblem Using LP From line 200
+B 4960 Solution Report     SOLVE subproblem Using LP From line 200
+B 4997 E x e c u t i o n
+I 4997 x
+I 5003 p
+I 5011 y
+I 5019 gamma
+I 5020 theta
+B 5024 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5035 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5057 Solution Report     SOLVE subproblem Using LP From line 200
+B 5094 E x e c u t i o n
+I 5094 x
+I 5100 p
+I 5108 y
+I 5116 gamma
+I 5117 theta
+B 5121 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5132 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5154 Solution Report     SOLVE subproblem Using LP From line 200
+B 5191 E x e c u t i o n
+I 5191 x
+I 5197 p
+I 5205 y
+I 5213 gamma
+I 5214 theta
+I 5216 lowerbound
+I 5217 upperbound
+I 5218 counter
+I 5219 oldU
+I 5228 oldY
+I 5240 oldP
+B 5255 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 5266 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 5286 Solution Report     SOLVE masterproblem Using LP From line 182
+B 5323 E x e c u t i o n
+I 5325 lowerbound
+I 5326 x
+I 5331 oldY
+I 5343 oldP
+I 5355 pi
+I 5370 phi
+I 5380 gamma
+I 5381 theta
+B 5385 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5396 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5418 Solution Report     SOLVE subproblem Using LP From line 200
+B 5455 E x e c u t i o n
+I 5455 x
+I 5461 p
+I 5469 y
+I 5477 gamma
+I 5478 theta
+B 5482 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5493 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5515 Solution Report     SOLVE subproblem Using LP From line 200
+B 5552 E x e c u t i o n
+I 5552 x
+I 5558 p
+I 5566 y
+I 5574 gamma
+I 5575 theta
+B 5579 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5590 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5612 Solution Report     SOLVE subproblem Using LP From line 200
+B 5649 E x e c u t i o n
+I 5649 x
+I 5655 p
+I 5663 y
+I 5671 gamma
+I 5672 theta
+I 5674 lowerbound
+I 5675 upperbound
+I 5676 counter
+I 5677 oldU
+I 5686 oldY
+I 5698 oldP
+B 5713 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 5724 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 5744 Solution Report     SOLVE masterproblem Using LP From line 182
+B 5781 E x e c u t i o n
+I 5783 lowerbound
+I 5784 x
+I 5789 oldY
+I 5801 oldP
+I 5813 pi
+I 5828 phi
+I 5838 gamma
+I 5839 theta
+B 5843 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5854 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5876 Solution Report     SOLVE subproblem Using LP From line 200
+B 5913 E x e c u t i o n
+I 5913 x
+I 5919 p
+I 5927 y
+I 5935 gamma
+I 5936 theta
+B 5940 Range Statistics    SOLVE subproblem Using LP From line 200
+B 5951 Model Statistics    SOLVE subproblem Using LP From line 200
+B 5973 Solution Report     SOLVE subproblem Using LP From line 200
+B 6010 E x e c u t i o n
+I 6010 x
+I 6016 p
+I 6024 y
+I 6032 gamma
+I 6033 theta
+B 6037 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6048 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6070 Solution Report     SOLVE subproblem Using LP From line 200
+B 6107 E x e c u t i o n
+I 6107 x
+I 6113 p
+I 6121 y
+I 6129 gamma
+I 6130 theta
+I 6132 lowerbound
+I 6133 upperbound
+I 6134 counter
+I 6135 oldU
+I 6144 oldY
+I 6156 oldP
+I 6168 scenarios
+I 6174 scenSubsetSize
+I 6175 probability
+B 6183 Range Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 6194 Model Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 6212 Solution Report     SOLVE initialmasterproblem Using LP From line 158
+F 6245 masterobj
+F 6246 plantamount
+G 6251 x
+G 6261 zmaster
+G 6262 theta
+G 6263 gamma
+B 6275 E x e c u t i o n
+I 6277 zmaster
+I 6279 objmaster
+B 6283 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6294 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6316 Solution Report     SOLVE subproblem Using LP From line 200
+B 6353 E x e c u t i o n
+I 6353 x
+I 6359 p
+I 6367 y
+I 6376 gamma
+I 6377 theta
+B 6381 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6392 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6414 Solution Report     SOLVE subproblem Using LP From line 200
+B 6451 E x e c u t i o n
+I 6451 x
+I 6457 p
+I 6465 y
+I 6474 gamma
+I 6475 theta
+B 6479 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6490 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6512 Solution Report     SOLVE subproblem Using LP From line 200
+B 6549 E x e c u t i o n
+I 6549 x
+I 6555 p
+I 6560 y
+I 6569 gamma
+I 6570 theta
+B 6574 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6585 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6607 Solution Report     SOLVE subproblem Using LP From line 200
+B 6644 E x e c u t i o n
+I 6644 x
+I 6650 p
+I 6655 y
+I 6664 gamma
+I 6665 theta
+I 6667 lowerbound
+I 6668 upperbound
+I 6669 counter
+I 6670 oldU
+I 6680 oldY
+I 6694 oldP
+B 6709 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 6720 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 6740 Solution Report     SOLVE masterproblem Using LP From line 182
+B 6777 E x e c u t i o n
+I 6779 lowerbound
+I 6780 x
+I 6785 oldY
+I 6799 oldP
+I 6811 pi
+I 6829 phi
+I 6840 gamma
+I 6841 theta
+B 6845 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6856 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6878 Solution Report     SOLVE subproblem Using LP From line 200
+B 6915 E x e c u t i o n
+I 6915 x
+I 6921 p
+I 6928 y
+I 6937 gamma
+I 6938 theta
+B 6942 Range Statistics    SOLVE subproblem Using LP From line 200
+B 6953 Model Statistics    SOLVE subproblem Using LP From line 200
+B 6975 Solution Report     SOLVE subproblem Using LP From line 200
+B 7012 E x e c u t i o n
+I 7012 x
+I 7018 p
+I 7025 y
+I 7034 gamma
+I 7035 theta
+B 7039 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7050 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7072 Solution Report     SOLVE subproblem Using LP From line 200
+B 7109 E x e c u t i o n
+I 7109 x
+I 7115 p
+I 7122 y
+I 7131 gamma
+I 7132 theta
+B 7136 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7147 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7169 Solution Report     SOLVE subproblem Using LP From line 200
+B 7206 E x e c u t i o n
+I 7206 x
+I 7212 p
+I 7219 y
+I 7227 gamma
+I 7228 theta
+I 7230 lowerbound
+I 7231 upperbound
+I 7232 counter
+I 7233 oldU
+I 7243 oldY
+I 7257 oldP
+B 7273 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 7284 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 7304 Solution Report     SOLVE masterproblem Using LP From line 182
+B 7341 E x e c u t i o n
+I 7343 lowerbound
+I 7344 x
+I 7349 oldY
+I 7363 oldP
+I 7376 pi
+I 7394 phi
+I 7405 gamma
+I 7406 theta
+B 7410 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7421 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7443 Solution Report     SOLVE subproblem Using LP From line 200
+B 7480 E x e c u t i o n
+I 7480 x
+I 7486 p
+I 7493 y
+I 7501 gamma
+I 7502 theta
+B 7506 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7517 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7539 Solution Report     SOLVE subproblem Using LP From line 200
+B 7576 E x e c u t i o n
+I 7576 x
+I 7582 p
+I 7589 y
+I 7597 gamma
+I 7598 theta
+B 7602 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7613 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7635 Solution Report     SOLVE subproblem Using LP From line 200
+B 7672 E x e c u t i o n
+I 7672 x
+I 7678 p
+I 7685 y
+I 7693 gamma
+I 7694 theta
+B 7698 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7709 Model Statistics    SOLVE subproblem Using LP From line 200
+B 7731 Solution Report     SOLVE subproblem Using LP From line 200
+B 7768 E x e c u t i o n
+I 7768 x
+I 7774 p
+I 7781 y
+I 7789 gamma
+I 7790 theta
+I 7792 lowerbound
+I 7793 upperbound
+I 7794 counter
+I 7795 oldU
+I 7805 oldY
+I 7819 oldP
+B 7835 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 7846 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 7866 Solution Report     SOLVE masterproblem Using LP From line 182
+B 7903 E x e c u t i o n
+I 7905 lowerbound
+I 7906 x
+I 7911 oldY
+I 7925 oldP
+I 7938 pi
+I 7956 phi
+I 7967 gamma
+I 7968 theta
+B 7972 Range Statistics    SOLVE subproblem Using LP From line 200
+B 7983 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8005 Solution Report     SOLVE subproblem Using LP From line 200
+B 8042 E x e c u t i o n
+I 8042 x
+I 8048 p
+I 8056 y
+I 8065 gamma
+I 8066 theta
+B 8070 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8081 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8103 Solution Report     SOLVE subproblem Using LP From line 200
+B 8140 E x e c u t i o n
+I 8140 x
+I 8146 p
+I 8154 y
+I 8163 gamma
+I 8164 theta
+B 8168 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8179 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8201 Solution Report     SOLVE subproblem Using LP From line 200
+B 8238 E x e c u t i o n
+I 8238 x
+I 8244 p
+I 8252 y
+I 8261 gamma
+I 8262 theta
+B 8266 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8277 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8299 Solution Report     SOLVE subproblem Using LP From line 200
+B 8336 E x e c u t i o n
+I 8336 x
+I 8342 p
+I 8350 y
+I 8359 gamma
+I 8360 theta
+I 8362 lowerbound
+I 8363 upperbound
+I 8364 counter
+I 8365 oldU
+I 8375 oldY
+I 8389 oldP
+B 8406 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 8417 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 8437 Solution Report     SOLVE masterproblem Using LP From line 182
+B 8474 E x e c u t i o n
+I 8476 lowerbound
+I 8477 x
+I 8482 oldY
+I 8496 oldP
+I 8510 pi
+I 8528 phi
+I 8539 gamma
+I 8540 theta
+B 8544 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8555 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8577 Solution Report     SOLVE subproblem Using LP From line 200
+B 8614 E x e c u t i o n
+I 8614 x
+I 8620 p
+I 8628 y
+I 8637 gamma
+I 8638 theta
+B 8642 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8653 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8675 Solution Report     SOLVE subproblem Using LP From line 200
+B 8712 E x e c u t i o n
+I 8712 x
+I 8718 p
+I 8726 y
+I 8735 gamma
+I 8736 theta
+B 8740 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8751 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8773 Solution Report     SOLVE subproblem Using LP From line 200
+B 8810 E x e c u t i o n
+I 8810 x
+I 8816 p
+I 8824 y
+I 8833 gamma
+I 8834 theta
+B 8838 Range Statistics    SOLVE subproblem Using LP From line 200
+B 8849 Model Statistics    SOLVE subproblem Using LP From line 200
+B 8871 Solution Report     SOLVE subproblem Using LP From line 200
+B 8908 E x e c u t i o n
+I 8908 x
+I 8914 p
+I 8922 y
+I 8930 gamma
+I 8931 theta
+I 8933 lowerbound
+I 8934 upperbound
+I 8935 counter
+I 8936 oldU
+I 8946 oldY
+I 8960 oldP
+B 8977 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 8988 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 9008 Solution Report     SOLVE masterproblem Using LP From line 182
+B 9045 E x e c u t i o n
+I 9047 lowerbound
+I 9048 x
+I 9053 oldY
+I 9067 oldP
+I 9081 pi
+I 9099 phi
+I 9110 gamma
+I 9111 theta
+B 9115 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9126 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9148 Solution Report     SOLVE subproblem Using LP From line 200
+B 9185 E x e c u t i o n
+I 9185 x
+I 9191 p
+I 9199 y
+I 9207 gamma
+I 9208 theta
+B 9212 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9223 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9245 Solution Report     SOLVE subproblem Using LP From line 200
+B 9282 E x e c u t i o n
+I 9282 x
+I 9288 p
+I 9296 y
+I 9304 gamma
+I 9305 theta
+B 9309 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9320 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9342 Solution Report     SOLVE subproblem Using LP From line 200
+B 9379 E x e c u t i o n
+I 9379 x
+I 9385 p
+I 9393 y
+I 9401 gamma
+I 9402 theta
+B 9406 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9417 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9439 Solution Report     SOLVE subproblem Using LP From line 200
+B 9476 E x e c u t i o n
+I 9476 x
+I 9482 p
+I 9490 y
+I 9498 gamma
+I 9499 theta
+I 9501 lowerbound
+I 9502 upperbound
+I 9503 counter
+I 9504 oldU
+I 9514 oldY
+I 9528 oldP
+B 9545 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 9556 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 9576 Solution Report     SOLVE masterproblem Using LP From line 182
+B 9613 E x e c u t i o n
+I 9615 lowerbound
+I 9616 x
+I 9621 oldY
+I 9635 oldP
+I 9649 pi
+I 9667 phi
+I 9678 gamma
+I 9679 theta
+B 9683 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9694 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9716 Solution Report     SOLVE subproblem Using LP From line 200
+B 9753 E x e c u t i o n
+I 9753 x
+I 9759 p
+I 9767 y
+I 9775 gamma
+I 9776 theta
+B 9780 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9791 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9813 Solution Report     SOLVE subproblem Using LP From line 200
+B 9850 E x e c u t i o n
+I 9850 x
+I 9856 p
+I 9864 y
+I 9872 gamma
+I 9873 theta
+B 9877 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9888 Model Statistics    SOLVE subproblem Using LP From line 200
+B 9910 Solution Report     SOLVE subproblem Using LP From line 200
+B 9947 E x e c u t i o n
+I 9947 x
+I 9953 p
+I 9961 y
+I 9969 gamma
+I 9970 theta
+B 9974 Range Statistics    SOLVE subproblem Using LP From line 200
+B 9985 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10007 Solution Report     SOLVE subproblem Using LP From line 200
+B 10044 E x e c u t i o n
+I 10044 x
+I 10050 p
+I 10058 y
+I 10066 gamma
+I 10067 theta
+I 10069 lowerbound
+I 10070 upperbound
+I 10071 counter
+I 10072 oldU
+I 10082 oldY
+I 10096 oldP
+B 10113 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 10124 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 10144 Solution Report     SOLVE masterproblem Using LP From line 182
+B 10181 E x e c u t i o n
+I 10183 lowerbound
+I 10184 x
+I 10189 oldY
+I 10203 oldP
+I 10217 pi
+I 10235 phi
+I 10246 gamma
+I 10247 theta
+B 10251 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10262 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10284 Solution Report     SOLVE subproblem Using LP From line 200
+B 10321 E x e c u t i o n
+I 10321 x
+I 10327 p
+I 10335 y
+I 10343 gamma
+I 10344 theta
+B 10348 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10359 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10381 Solution Report     SOLVE subproblem Using LP From line 200
+B 10418 E x e c u t i o n
+I 10418 x
+I 10424 p
+I 10432 y
+I 10440 gamma
+I 10441 theta
+B 10445 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10456 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10478 Solution Report     SOLVE subproblem Using LP From line 200
+B 10515 E x e c u t i o n
+I 10515 x
+I 10521 p
+I 10529 y
+I 10537 gamma
+I 10538 theta
+B 10542 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10553 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10575 Solution Report     SOLVE subproblem Using LP From line 200
+B 10612 E x e c u t i o n
+I 10612 x
+I 10618 p
+I 10626 y
+I 10634 gamma
+I 10635 theta
+I 10637 lowerbound
+I 10638 upperbound
+I 10639 counter
+I 10640 oldU
+I 10650 oldY
+I 10664 oldP
+B 10681 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 10692 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 10712 Solution Report     SOLVE masterproblem Using LP From line 182
+B 10749 E x e c u t i o n
+I 10751 lowerbound
+I 10752 x
+I 10757 oldY
+I 10771 oldP
+I 10785 pi
+I 10803 phi
+I 10814 gamma
+I 10815 theta
+B 10819 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10830 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10852 Solution Report     SOLVE subproblem Using LP From line 200
+B 10889 E x e c u t i o n
+I 10889 x
+I 10895 p
+I 10903 y
+I 10911 gamma
+I 10912 theta
+B 10916 Range Statistics    SOLVE subproblem Using LP From line 200
+B 10927 Model Statistics    SOLVE subproblem Using LP From line 200
+B 10949 Solution Report     SOLVE subproblem Using LP From line 200
+B 10986 E x e c u t i o n
+I 10986 x
+I 10992 p
+I 11000 y
+I 11008 gamma
+I 11009 theta
+B 11013 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11024 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11046 Solution Report     SOLVE subproblem Using LP From line 200
+B 11083 E x e c u t i o n
+I 11083 x
+I 11089 p
+I 11097 y
+I 11105 gamma
+I 11106 theta
+B 11110 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11121 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11143 Solution Report     SOLVE subproblem Using LP From line 200
+B 11180 E x e c u t i o n
+I 11180 x
+I 11186 p
+I 11194 y
+I 11202 gamma
+I 11203 theta
+I 11205 lowerbound
+I 11206 upperbound
+I 11207 counter
+I 11208 oldU
+I 11218 oldY
+I 11232 oldP
+I 11246 scenarios
+I 11252 scenSubsetSize
+I 11253 probability
+B 11261 Range Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 11272 Model Statistics    SOLVE initialmasterproblem Using LP From line 158
+B 11290 Solution Report     SOLVE initialmasterproblem Using LP From line 158
+F 11323 masterobj
+F 11324 plantamount
+G 11329 x
+G 11339 zmaster
+G 11340 theta
+G 11341 gamma
+B 11353 E x e c u t i o n
+I 11355 zmaster
+I 11357 objmaster
+B 11361 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11372 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11394 Solution Report     SOLVE subproblem Using LP From line 200
+B 11431 E x e c u t i o n
+I 11431 x
+I 11437 p
+I 11445 y
+I 11454 gamma
+I 11455 theta
+B 11459 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11470 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11492 Solution Report     SOLVE subproblem Using LP From line 200
+B 11529 E x e c u t i o n
+I 11529 x
+I 11535 p
+I 11543 y
+I 11552 gamma
+I 11553 theta
+B 11557 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11568 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11590 Solution Report     SOLVE subproblem Using LP From line 200
+B 11627 E x e c u t i o n
+I 11627 x
+I 11633 p
+I 11641 y
+I 11650 gamma
+I 11651 theta
+B 11655 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11666 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11688 Solution Report     SOLVE subproblem Using LP From line 200
+B 11725 E x e c u t i o n
+I 11725 x
+I 11731 p
+I 11736 y
+I 11745 gamma
+I 11746 theta
+B 11750 Range Statistics    SOLVE subproblem Using LP From line 200
+B 11761 Model Statistics    SOLVE subproblem Using LP From line 200
+B 11783 Solution Report     SOLVE subproblem Using LP From line 200
+B 11820 E x e c u t i o n
+I 11820 x
+I 11826 p
+I 11831 y
+I 11840 gamma
+I 11841 theta
+I 11843 lowerbound
+I 11844 upperbound
+I 11845 counter
+I 11846 oldU
+I 11857 oldY
+I 11873 oldP
+B 11890 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 11901 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 11921 Solution Report     SOLVE masterproblem Using LP From line 182
+B 11958 E x e c u t i o n
+I 11960 lowerbound
+I 11961 x
+I 11966 oldY
+I 11982 oldP
+I 11996 pi
+I 12017 phi
+I 12029 gamma
+I 12030 theta
+B 12034 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12045 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12067 Solution Report     SOLVE subproblem Using LP From line 200
+B 12104 E x e c u t i o n
+I 12104 x
+I 12110 p
+I 12117 y
+I 12126 gamma
+I 12127 theta
+B 12131 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12142 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12164 Solution Report     SOLVE subproblem Using LP From line 200
+B 12201 E x e c u t i o n
+I 12201 x
+I 12207 p
+I 12214 y
+I 12223 gamma
+I 12224 theta
+B 12228 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12239 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12261 Solution Report     SOLVE subproblem Using LP From line 200
+B 12298 E x e c u t i o n
+I 12298 x
+I 12304 p
+I 12311 y
+I 12320 gamma
+I 12321 theta
+B 12325 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12336 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12358 Solution Report     SOLVE subproblem Using LP From line 200
+B 12395 E x e c u t i o n
+I 12395 x
+I 12401 p
+I 12408 y
+I 12417 gamma
+I 12418 theta
+B 12422 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12433 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12455 Solution Report     SOLVE subproblem Using LP From line 200
+B 12492 E x e c u t i o n
+I 12492 x
+I 12498 p
+I 12505 y
+I 12513 gamma
+I 12514 theta
+I 12516 lowerbound
+I 12517 upperbound
+I 12518 counter
+I 12519 oldU
+I 12530 oldY
+I 12546 oldP
+B 12564 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 12575 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 12595 Solution Report     SOLVE masterproblem Using LP From line 182
+B 12632 E x e c u t i o n
+I 12634 lowerbound
+I 12635 x
+I 12640 oldY
+I 12656 oldP
+I 12671 pi
+I 12692 phi
+I 12704 gamma
+I 12705 theta
+B 12709 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12720 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12742 Solution Report     SOLVE subproblem Using LP From line 200
+B 12779 E x e c u t i o n
+I 12779 x
+I 12785 p
+I 12792 y
+I 12800 gamma
+I 12801 theta
+B 12805 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12816 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12838 Solution Report     SOLVE subproblem Using LP From line 200
+B 12875 E x e c u t i o n
+I 12875 x
+I 12881 p
+I 12888 y
+I 12896 gamma
+I 12897 theta
+B 12901 Range Statistics    SOLVE subproblem Using LP From line 200
+B 12912 Model Statistics    SOLVE subproblem Using LP From line 200
+B 12934 Solution Report     SOLVE subproblem Using LP From line 200
+B 12971 E x e c u t i o n
+I 12971 x
+I 12977 p
+I 12984 y
+I 12992 gamma
+I 12993 theta
+B 12997 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13008 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13030 Solution Report     SOLVE subproblem Using LP From line 200
+B 13067 E x e c u t i o n
+I 13067 x
+I 13073 p
+I 13080 y
+I 13088 gamma
+I 13089 theta
+B 13093 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13104 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13126 Solution Report     SOLVE subproblem Using LP From line 200
+B 13163 E x e c u t i o n
+I 13163 x
+I 13169 p
+I 13176 y
+I 13184 gamma
+I 13185 theta
+I 13187 lowerbound
+I 13188 upperbound
+I 13189 counter
+I 13190 oldU
+I 13201 oldY
+I 13217 oldP
+B 13235 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 13246 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 13266 Solution Report     SOLVE masterproblem Using LP From line 182
+B 13303 E x e c u t i o n
+I 13305 lowerbound
+I 13306 x
+I 13311 oldY
+I 13327 oldP
+I 13342 pi
+I 13363 phi
+I 13375 gamma
+I 13376 theta
+B 13380 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13391 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13413 Solution Report     SOLVE subproblem Using LP From line 200
+B 13450 E x e c u t i o n
+I 13450 x
+I 13456 p
+I 13464 y
+I 13473 gamma
+I 13474 theta
+B 13478 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13489 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13511 Solution Report     SOLVE subproblem Using LP From line 200
+B 13548 E x e c u t i o n
+I 13548 x
+I 13554 p
+I 13562 y
+I 13571 gamma
+I 13572 theta
+B 13576 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13587 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13609 Solution Report     SOLVE subproblem Using LP From line 200
+B 13646 E x e c u t i o n
+I 13646 x
+I 13652 p
+I 13660 y
+I 13669 gamma
+I 13670 theta
+B 13674 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13685 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13707 Solution Report     SOLVE subproblem Using LP From line 200
+B 13744 E x e c u t i o n
+I 13744 x
+I 13750 p
+I 13758 y
+I 13767 gamma
+I 13768 theta
+B 13772 Range Statistics    SOLVE subproblem Using LP From line 200
+B 13783 Model Statistics    SOLVE subproblem Using LP From line 200
+B 13805 Solution Report     SOLVE subproblem Using LP From line 200
+B 13842 E x e c u t i o n
+I 13842 x
+I 13848 p
+I 13856 y
+I 13865 gamma
+I 13866 theta
+I 13868 lowerbound
+I 13869 upperbound
+I 13870 counter
+I 13871 oldU
+I 13882 oldY
+I 13898 oldP
+B 13917 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 13928 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 13948 Solution Report     SOLVE masterproblem Using LP From line 182
+B 13985 E x e c u t i o n
+I 13987 lowerbound
+I 13988 x
+I 13993 oldY
+I 14009 oldP
+I 14025 pi
+I 14046 phi
+I 14058 gamma
+I 14059 theta
+B 14063 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14074 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14096 Solution Report     SOLVE subproblem Using LP From line 200
+B 14133 E x e c u t i o n
+I 14133 x
+I 14139 p
+I 14147 y
+I 14156 gamma
+I 14157 theta
+B 14161 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14172 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14194 Solution Report     SOLVE subproblem Using LP From line 200
+B 14231 E x e c u t i o n
+I 14231 x
+I 14237 p
+I 14245 y
+I 14254 gamma
+I 14255 theta
+B 14259 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14270 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14292 Solution Report     SOLVE subproblem Using LP From line 200
+B 14329 E x e c u t i o n
+I 14329 x
+I 14335 p
+I 14343 y
+I 14352 gamma
+I 14353 theta
+B 14357 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14368 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14390 Solution Report     SOLVE subproblem Using LP From line 200
+B 14427 E x e c u t i o n
+I 14427 x
+I 14433 p
+I 14441 y
+I 14450 gamma
+I 14451 theta
+B 14455 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14466 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14488 Solution Report     SOLVE subproblem Using LP From line 200
+B 14525 E x e c u t i o n
+I 14525 x
+I 14531 p
+I 14539 y
+I 14548 gamma
+I 14549 theta
+I 14551 lowerbound
+I 14552 upperbound
+I 14553 counter
+I 14554 oldU
+I 14565 oldY
+I 14581 oldP
+B 14600 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 14611 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 14631 Solution Report     SOLVE masterproblem Using LP From line 182
+B 14668 E x e c u t i o n
+I 14670 lowerbound
+I 14671 x
+I 14676 oldY
+I 14692 oldP
+I 14708 pi
+I 14729 phi
+I 14741 gamma
+I 14742 theta
+B 14746 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14757 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14779 Solution Report     SOLVE subproblem Using LP From line 200
+B 14816 E x e c u t i o n
+I 14816 x
+I 14822 p
+I 14830 y
+I 14838 gamma
+I 14839 theta
+B 14843 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14854 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14876 Solution Report     SOLVE subproblem Using LP From line 200
+B 14913 E x e c u t i o n
+I 14913 x
+I 14919 p
+I 14927 y
+I 14935 gamma
+I 14936 theta
+B 14940 Range Statistics    SOLVE subproblem Using LP From line 200
+B 14951 Model Statistics    SOLVE subproblem Using LP From line 200
+B 14973 Solution Report     SOLVE subproblem Using LP From line 200
+B 15010 E x e c u t i o n
+I 15010 x
+I 15016 p
+I 15024 y
+I 15032 gamma
+I 15033 theta
+B 15037 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15048 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15070 Solution Report     SOLVE subproblem Using LP From line 200
+B 15107 E x e c u t i o n
+I 15107 x
+I 15113 p
+I 15121 y
+I 15129 gamma
+I 15130 theta
+B 15134 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15145 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15167 Solution Report     SOLVE subproblem Using LP From line 200
+B 15204 E x e c u t i o n
+I 15204 x
+I 15210 p
+I 15218 y
+I 15226 gamma
+I 15227 theta
+I 15229 lowerbound
+I 15230 upperbound
+I 15231 counter
+I 15232 oldU
+I 15243 oldY
+I 15259 oldP
+B 15278 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 15289 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 15309 Solution Report     SOLVE masterproblem Using LP From line 182
+B 15346 E x e c u t i o n
+I 15348 lowerbound
+I 15349 x
+I 15354 oldY
+I 15370 oldP
+I 15386 pi
+I 15407 phi
+I 15419 gamma
+I 15420 theta
+B 15424 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15435 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15457 Solution Report     SOLVE subproblem Using LP From line 200
+B 15494 E x e c u t i o n
+I 15494 x
+I 15500 p
+I 15508 y
+I 15516 gamma
+I 15517 theta
+B 15521 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15532 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15554 Solution Report     SOLVE subproblem Using LP From line 200
+B 15591 E x e c u t i o n
+I 15591 x
+I 15597 p
+I 15605 y
+I 15613 gamma
+I 15614 theta
+B 15618 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15629 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15651 Solution Report     SOLVE subproblem Using LP From line 200
+B 15688 E x e c u t i o n
+I 15688 x
+I 15694 p
+I 15702 y
+I 15710 gamma
+I 15711 theta
+B 15715 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15726 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15748 Solution Report     SOLVE subproblem Using LP From line 200
+B 15785 E x e c u t i o n
+I 15785 x
+I 15791 p
+I 15799 y
+I 15807 gamma
+I 15808 theta
+B 15812 Range Statistics    SOLVE subproblem Using LP From line 200
+B 15823 Model Statistics    SOLVE subproblem Using LP From line 200
+B 15845 Solution Report     SOLVE subproblem Using LP From line 200
+B 15882 E x e c u t i o n
+I 15882 x
+I 15888 p
+I 15896 y
+I 15904 gamma
+I 15905 theta
+I 15907 lowerbound
+I 15908 upperbound
+I 15909 counter
+I 15910 oldU
+I 15921 oldY
+I 15937 oldP
+B 15956 Range Statistics    SOLVE masterproblem Using LP From line 182
+B 15967 Model Statistics    SOLVE masterproblem Using LP From line 182
+B 15987 Solution Report     SOLVE masterproblem Using LP From line 182
+B 16024 E x e c u t i o n
+I 16026 lowerbound
+I 16027 x
+I 16032 oldY
+I 16048 oldP
+I 16064 pi
+I 16085 phi
+I 16097 gamma
+I 16098 theta
+B 16102 Range Statistics    SOLVE subproblem Using LP From line 200
+B 16113 Model Statistics    SOLVE subproblem Using LP From line 200
+B 16135 Solution Report     SOLVE subproblem Using LP From line 200
+B 16172 E x e c u t i o n
+I 16172 x
+I 16178 p
+I 16186 y
+I 16194 gamma
+I 16195 theta
+B 16199 Range Statistics    SOLVE subproblem Using LP From line 200
+B 16210 Model Statistics    SOLVE subprobl

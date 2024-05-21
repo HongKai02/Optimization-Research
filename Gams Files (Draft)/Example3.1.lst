@@ -1,0 +1,127 @@
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 03/06/24 14:21:08 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  option limrow = 0, limcol = 0;
+   2   
+   3  positive variable x, y;
+   4   
+   5  variable obj;
+   6   
+   7  equations objective, constraint1, constraint2, constraint3, constraint4;
+   8   
+   9  objective..
+  10      obj =e= -y - [x/4];
+  11   
+  12  constraint1..
+  13      y - x =l= 5;
+  14   
+  15  constraint2..
+  16      y - [1/2]*x =l= [15/2];
+  17   
+  18  constraint3..
+  19      y + [1/2]*x =l= [35/2];
+  20   
+  21  constraint4..
+  22      -y + x =l= 10;
+  23   
+  24  x.up = 16;
+  25   
+  26  model original /objective, constraint1, constraint2, constraint3, constraint4/;
+  27   
+  28  solve original using lp minimizing obj;
+  29   
+  30   
+
+
+COMPILATION TIME     =        0.000 SECONDS      2 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 03/06/24 14:21:08 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE original Using LP From line 28
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+00, 1.750E+01] - Zero values observed as well
+Bound     [min, max] : [ 1.600E+01, 1.600E+01] - Zero values observed as well
+Matrix    [min, max] : [ 2.500E-01, 1.000E+00]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 03/06/24 14:21:08 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE original Using LP From line 28
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           5     SINGLE EQUATIONS            5
+BLOCKS OF VARIABLES           3     SINGLE VARIABLES            3
+NON ZERO ELEMENTS            11
+
+
+GENERATION TIME      =        0.059 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 03/06/24 14:21:08 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE original Using LP From line 28
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   original            OBJECTIVE  obj
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  28
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE              -15.0000
+
+ RESOURCE USAGE, LIMIT          0.001 10000000000.000
+ ITERATION COUNT, LIMIT         3    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:          -15.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU objective           .              .              .             1.0000      
+---- EQU constrain~        -INF            2.5000         5.0000          .          
+---- EQU constrain~        -INF            7.5000         7.5000        -0.2500      
+---- EQU constrain~        -INF           17.5000        17.5000        -0.7500      
+---- EQU constrain~        -INF           -2.5000        10.0000          .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR x                   .            10.0000        16.0000          .          
+---- VAR y                   .            12.5000        +INF             .          
+---- VAR obj               -INF          -15.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+
+
+EXECUTION TIME       =        0.290 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/hongkai/Documents/GAMS/Studio/workspace/Research/Example3.1.gms
+Output     /Users/hongkai/Documents/GAMS/Studio/workspace/Research/Example3.1.lst

@@ -1,0 +1,424 @@
+B 3 C o m p i l a t i o n
+B 229 Equation Listing    SOLVE initialmasterproblem Using LP From line 144
+D 232 masterobj
+D 237 plantamount
+B 243 Column Listing      SOLVE initialmasterproblem Using LP From line 144
+E 246 x
+E 264 zmaster
+E 271 theta
+E 278 gamma
+B 286 Range Statistics    SOLVE initialmasterproblem Using LP From line 144
+B 297 Model Statistics    SOLVE initialmasterproblem Using LP From line 144
+B 310 Solution Report     SOLVE initialmasterproblem Using LP From line 144
+F 343 masterobj
+F 344 plantamount
+G 349 x
+G 359 zmaster
+G 360 theta
+G 361 gamma
+B 373 E x e c u t i o n
+I 373 x
+B 382 Equation Listing    SOLVE subproblem Using LP From line 195
+D 385 subobj
+D 390 CVaRConstraint
+D 395 wheatfeeding
+D 400 cornfeeding
+D 405 sellingBeets
+D 410 setx
+D 419 setgamma
+B 425 Column Listing      SOLVE subproblem Using LP From line 195
+E 428 p
+E 446 y
+E 459 u
+E 467 subX
+E 485 zsub
+E 492 subgamma
+B 501 Range Statistics    SOLVE subproblem Using LP From line 195
+B 512 Model Statistics    SOLVE subproblem Using LP From line 195
+B 532 Solution Report     SOLVE subproblem Using LP From line 195
+F 563 subobj
+F 569 CVaRConstraint
+F 575 wheatfeeding
+F 581 cornfeeding
+F 587 sellingBeets
+F 593 setx
+F 601 setgamma
+G 607 p
+G 615 y
+G 622 u
+G 628 subX
+G 638 zsub
+G 639 subgamma
+B 647 E x e c u t i o n
+I 647 scenarios
+I 653 u
+I 659 "WHATDUPPPP..."
+I 660 oldU
+I 668 subgamma
+I 669 y
+I 677 p
+B 685 Equation Listing    SOLVE subproblem Using LP From line 195
+D 688 subobj
+D 693 CVaRConstraint
+D 698 wheatfeeding
+D 703 cornfeeding
+D 708 sellingBeets
+D 713 setx
+D 722 setgamma
+B 728 Column Listing      SOLVE subproblem Using LP From line 195
+E 731 p
+E 749 y
+E 762 u
+E 770 subX
+E 788 zsub
+E 795 subgamma
+B 804 Range Statistics    SOLVE subproblem Using LP From line 195
+B 815 Model Statistics    SOLVE subproblem Using LP From line 195
+B 835 Solution Report     SOLVE subproblem Using LP From line 195
+F 866 subobj
+F 872 CVaRConstraint
+F 878 wheatfeeding
+F 884 cornfeeding
+F 890 sellingBeets
+F 896 setx
+F 904 setgamma
+G 910 p
+G 918 y
+G 925 u
+G 931 subX
+G 941 zsub
+G 942 subgamma
+B 950 E x e c u t i o n
+I 950 scenarios
+I 956 u
+I 962 "WHATDUPPPP..."
+I 963 oldU
+I 972 subgamma
+I 973 y
+I 981 p
+B 989 Equation Listing    SOLVE subproblem Using LP From line 195
+D 992 subobj
+D 997 CVaRConstraint
+D 1002 wheatfeeding
+D 1007 cornfeeding
+D 1012 sellingBeets
+D 1017 setx
+D 1026 setgamma
+B 1032 Column Listing      SOLVE subproblem Using LP From line 195
+E 1035 p
+E 1053 y
+E 1066 u
+E 1074 subX
+E 1092 zsub
+E 1099 subgamma
+B 1108 Range Statistics    SOLVE subproblem Using LP From line 195
+B 1119 Model Statistics    SOLVE subproblem Using LP From line 195
+B 1139 Solution Report     SOLVE subproblem Using LP From line 195
+F 1170 subobj
+F 1176 CVaRConstraint
+F 1182 wheatfeeding
+F 1188 cornfeeding
+F 1194 sellingBeets
+F 1200 setx
+F 1208 setgamma
+G 1214 p
+G 1222 y
+G 1229 u
+G 1235 subX
+G 1245 zsub
+G 1246 subgamma
+B 1254 E x e c u t i o n
+I 1254 scenarios
+I 1260 u
+I 1266 "WHATDUPPPP..."
+I 1267 oldU
+I 1277 subgamma
+I 1278 y
+I 1286 p
+I 1292 lowerbound
+I 1293 upperbound
+B 1297 Equation Listing    SOLVE masterproblem Using LP From line 177
+D 1300 masterobj
+D 1305 plantamount
+D 1310 cutcon
+B 1316 Column Listing      SOLVE masterproblem Using LP From line 177
+E 1319 x
+E 1340 zmaster
+E 1347 theta
+E 1355 gamma
+B 1364 Range Statistics    SOLVE masterproblem Using LP From line 177
+B 1375 Model Statistics    SOLVE masterproblem Using LP From line 177
+B 1393 Solution Report     SOLVE masterproblem Using LP From line 177
+F 1426 masterobj
+F 1427 plantamount
+F 1432 cutcon
+G 1438 x
+G 1448 zmaster
+G 1449 theta
+G 1450 gamma
+B 1462 E x e c u t i o n
+I 1464 objmaster
+I 1466 lowerbound
+I 1467 upperbound
+B 1471 Equation Listing    SOLVE subproblem Using LP From line 195
+D 1474 subobj
+D 1479 CVaRConstraint
+D 1484 wheatfeeding
+D 1489 cornfeeding
+D 1494 sellingBeets
+D 1499 setx
+D 1510 setgamma
+B 1518 Column Listing      SOLVE subproblem Using LP From line 195
+E 1521 p
+E 1539 y
+E 1552 u
+E 1560 subX
+E 1581 zsub
+E 1588 subgamma
+B 1598 Range Statistics    SOLVE subproblem Using LP From line 195
+B 1609 Model Statistics    SOLVE subproblem Using LP From line 195
+B 1629 Solution Report     SOLVE subproblem Using LP From line 195
+F 1657 subobj
+F 1663 CVaRConstraint
+F 1669 wheatfeeding
+F 1675 cornfeeding
+F 1681 sellingBeets
+F 1687 setx
+F 1698 setgamma
+G 1705 p
+G 1713 y
+G 1720 u
+G 1726 subX
+G 1736 zsub
+G 1737 subgamma
+B 1745 E x e c u t i o n
+I 1745 scenarios
+I 1751 u
+I 1757 "WHATDUPPPP..."
+I 1758 oldU
+I 1768 subgamma
+I 1769 y
+I 1777 p
+B 1785 Equation Listing    SOLVE subproblem Using LP From line 195
+D 1788 subobj
+D 1793 CVaRConstraint
+D 1798 wheatfeeding
+D 1803 cornfeeding
+D 1808 sellingBeets
+D 1813 setx
+D 1824 setgamma
+B 1832 Column Listing      SOLVE subproblem Using LP From line 195
+E 1835 p
+E 1853 y
+E 1866 u
+E 1874 subX
+E 1895 zsub
+E 1902 subgamma
+B 1912 Range Statistics    SOLVE subproblem Using LP From line 195
+B 1923 Model Statistics    SOLVE subproblem Using LP From line 195
+B 1943 Solution Report     SOLVE subproblem Using LP From line 195
+F 1971 subobj
+F 1977 CVaRConstraint
+F 1983 wheatfeeding
+F 1989 cornfeeding
+F 1995 sellingBeets
+F 2001 setx
+F 2012 setgamma
+G 2019 p
+G 2027 y
+G 2034 u
+G 2040 subX
+G 2050 zsub
+G 2051 subgamma
+B 2059 E x e c u t i o n
+I 2059 scenarios
+I 2065 u
+I 2071 "WHATDUPPPP..."
+I 2072 oldU
+I 2082 subgamma
+I 2083 y
+I 2091 p
+B 2099 Equation Listing    SOLVE subproblem Using LP From line 195
+D 2102 subobj
+D 2107 CVaRConstraint
+D 2112 wheatfeeding
+D 2117 cornfeeding
+D 2122 sellingBeets
+D 2127 setx
+D 2138 setgamma
+B 2146 Column Listing      SOLVE subproblem Using LP From line 195
+E 2149 p
+E 2167 y
+E 2180 u
+E 2188 subX
+E 2209 zsub
+E 2216 subgamma
+B 2226 Range Statistics    SOLVE subproblem Using LP From line 195
+B 2237 Model Statistics    SOLVE subproblem Using LP From line 195
+B 2257 Solution Report     SOLVE subproblem Using LP From line 195
+F 2285 subobj
+F 2291 CVaRConstraint
+F 2297 wheatfeeding
+F 2303 cornfeeding
+F 2309 sellingBeets
+F 2315 setx
+F 2326 setgamma
+G 2333 p
+G 2341 y
+G 2348 u
+G 2354 subX
+G 2364 zsub
+G 2365 subgamma
+B 2373 E x e c u t i o n
+I 2373 scenarios
+I 2379 u
+I 2385 "WHATDUPPPP..."
+I 2386 oldU
+I 2396 subgamma
+I 2397 y
+I 2405 p
+I 2411 lowerbound
+I 2412 upperbound
+B 2416 Equation Listing    SOLVE masterproblem Using LP From line 177
+D 2419 masterobj
+D 2424 plantamount
+D 2429 cutcon
+B 2437 Column Listing      SOLVE masterproblem Using LP From line 177
+E 2440 x
+E 2461 zmaster
+E 2468 theta
+E 2477 gamma
+B 2486 Range Statistics    SOLVE masterproblem Using LP From line 177
+B 2497 Model Statistics    SOLVE masterproblem Using LP From line 177
+B 2515 Solution Report     SOLVE masterproblem Using LP From line 177
+F 2548 masterobj
+F 2549 plantamount
+F 2554 cutcon
+G 2561 x
+G 2571 zmaster
+G 2572 theta
+G 2573 gamma
+B 2585 E x e c u t i o n
+I 2587 objmaster
+I 2589 lowerbound
+I 2590 upperbound
+B 2594 Equation Listing    SOLVE subproblem Using LP From line 195
+D 2597 subobj
+D 2602 CVaRConstraint
+D 2607 wheatfeeding
+D 2612 cornfeeding
+D 2617 sellingBeets
+D 2622 setx
+D 2633 setgamma
+B 2643 Column Listing      SOLVE subproblem Using LP From line 195
+E 2646 p
+E 2664 y
+E 2677 u
+E 2685 subX
+E 2709 zsub
+E 2716 subgamma
+B 2727 Range Statistics    SOLVE subproblem Using LP From line 195
+B 2738 Model Statistics    SOLVE subproblem Using LP From line 195
+B 2758 Solution Report     SOLVE subproblem Using LP From line 195
+F 2786 subobj
+F 2792 CVaRConstraint
+F 2798 wheatfeeding
+F 2804 cornfeeding
+F 2810 sellingBeets
+F 2816 setx
+F 2830 setgamma
+G 2838 p
+G 2846 y
+G 2853 u
+G 2859 subX
+G 2869 zsub
+G 2870 subgamma
+B 2878 E x e c u t i o n
+I 2878 scenarios
+I 2884 u
+I 2890 "WHATDUPPPP..."
+I 2891 oldU
+I 2901 subgamma
+I 2902 y
+I 2910 p
+B 2918 Equation Listing    SOLVE subproblem Using LP From line 195
+D 2921 subobj
+D 2926 CVaRConstraint
+D 2931 wheatfeeding
+D 2936 cornfeeding
+D 2941 sellingBeets
+D 2946 setx
+D 2957 setgamma
+B 2967 Column Listing      SOLVE subproblem Using LP From line 195
+E 2970 p
+E 2988 y
+E 3001 u
+E 3009 subX
+E 3033 zsub
+E 3040 subgamma
+B 3051 Range Statistics    SOLVE subproblem Using LP From line 195
+B 3062 Model Statistics    SOLVE subproblem Using LP From line 195
+B 3082 Solution Report     SOLVE subproblem Using LP From line 195
+F 3110 subobj
+F 3116 CVaRConstraint
+F 3122 wheatfeeding
+F 3128 cornfeeding
+F 3134 sellingBeets
+F 3140 setx
+F 3154 setgamma
+G 3162 p
+G 3170 y
+G 3177 u
+G 3183 subX
+G 3193 zsub
+G 3194 subgamma
+B 3202 E x e c u t i o n
+I 3202 scenarios
+I 3208 u
+I 3214 "WHATDUPPPP..."
+I 3215 oldU
+I 3225 subgamma
+I 3226 y
+I 3234 p
+B 3242 Equation Listing    SOLVE subproblem Using LP From line 195
+D 3245 subobj
+D 3250 CVaRConstraint
+D 3255 wheatfeeding
+D 3260 cornfeeding
+D 3265 sellingBeets
+D 3270 setx
+D 3281 setgamma
+B 3291 Column Listing      SOLVE subproblem Using LP From line 195
+E 3294 p
+E 3312 y
+E 3325 u
+E 3333 subX
+E 3357 zsub
+E 3364 subgamma
+B 3375 Range Statistics    SOLVE subproblem Using LP From line 195
+B 3386 Model Statistics    SOLVE subproblem Using LP From line 195
+B 3406 Solution Report     SOLVE subproblem Using LP From line 195
+F 3434 subobj
+F 3440 CVaRConstraint
+F 3446 wheatfeeding
+F 3452 cornfeeding
+F 3458 sellingBeets
+F 3464 setx
+F 3478 setgamma
+G 3486 p
+G 3494 y
+G 3501 u
+G 3507 subX
+G 3517 zsub
+G 3518 subgamma
+B 3526 E x e c u t i o n
+I 3526 scenarios
+I 3532 u
+I 3538 "WHATDUPPPP..."
+I 3539 oldU
+I 3549 subgamma
+I 3550 y
+I 3558 p
+I 3564 lowerbound
+I 3565 upperbound
+I 3567 "Converged..."

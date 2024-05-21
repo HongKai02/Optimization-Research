@@ -1,0 +1,4720 @@
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  sets
+   2  crops /'wheat', 'corn', 'sugarbeets'/
+   3  scenarios /lo,mid,hi/
+   4  ;
+   5   
+   6  table yield(crops,scenarios) ’possible outcomes for demand’
+   7              lo  mid hi
+   8  wheat       2   2.5 3
+   9  corn        2.4 3   3.6
+  10  sugarbeets  16  20  24
+  11  ;
+  12   
+  13  parameter alpha 'confidence level for CVaR';
+  14  alpha = [1/3];
+  15   
+  16   
+  17  parameter probability(scenarios) ’probability of each scenario materializing’
+  18  /
+  19  lo [1/3]
+  20  mid [1/3]
+  21  hi [1/3]
+  22  /;
+  23   
+  24  parameter cost(crops) 'cost to plant per acre'
+  25  /
+  26  wheat 150,
+  27  corn 230,
+  28  sugarbeets 260
+  29  /;
+  30   
+  31  parameter weight;
+  32  weight = 1;
+  33   
+  34  *----------------------------------------------------------------------- * Form the Benders master problem *-----------------------------------------------------------------------
+  35  ************************** Sets and Variables Needed to Perform Benders **************************
+  36  sets iter ’max Benders iterations’ /iter1*iter2500/,
+  37       dyniter(iter) ’dynamic subset’,
+  38       dynscen(scenarios) 'dynamic subset of scenarios',
+  39       curiter(iter) 'dynamic subset of iter',
+  40       curscen(scenarios) 'scenario that the problem should look at'
+  41  ;
+  42   
+  43  parameters oldgamma(iter),
+  44            oldX(crops, iter),
+  45            oldU(scenarios, iter),
+  46            pi(scenarios, crops, iter),
+  47            phi(scenarios, iter),
+  48            oldY(crops, scenarios, iter),
+  49            oldP(crops, scenarios, iter)
+  50            ;
+  51   
+  52   
+  53  ************************** Initial Master Problem **************************
+  54  positive variables x(crops) '# of acres of land to allocate to wheat, corn, and sugarbeets';
+  55   
+  56  free variables zmaster ’objective variable of master problem’,
+  57                 theta ’extra term in master obj’,
+  58                 gamma 'VaR'
+  59  ;
+  60   
+  61  equations masterobj ’master objective function’,
+  62            plantamount 'constraint on first stage variables'
+  63  ;
+  64   
+  65  masterobj..
+  66      zmaster =e= sum(crops, cost(crops) * x(crops)) + weight * gamma + theta;
+  67   
+  68  plantamount..
+  69      sum(crops, x(crops)) =l= 500;
+  70   
+  71  * Set lower bounds for gamma and theta (or else they'd go to -infinity)
+  72  gamma.lo = -500000000000;
+  73  theta.lo = -500000000000;
+  74   
+  75  model initialmasterproblem /masterobj, plantamount/;
+  76   
+  77  ************************** Subproblem **************************
+  78  positive variables p(crops, scenarios) '# of tons of each type of crops to sell in each scenario',
+  79                     y(crops, scenarios) '# of tons of wheat/corn to buy in each scenario',
+  80                     u(scenarios) 'auxiliary variables for reformulation of CVaR',
+  81                     subX(crops)
+  82  ;
+  83   
+  84  free variables zsub,
+  85                 subgamma;
+  86   
+  87  equations subobj(scenarios),
+  88            CVaRConstraint(scenarios),
+  89            wheatfeeding(scenarios),
+  90            cornfeeding(scenarios),
+  91            sellingBeets(scenarios),
+  92            setx(crops, iter),
+  93            setgamma
+  94            ;
+  95   
+  96  * Lots of equations here are indexed by scenarios, but there should only be one active scenario at a time.
+  97  subobj(curscen)..
+  98      zsub =e= (weight) * ([1/(1-alpha)] * (probability(curscen) * u(curscen))) + (1-weight) * (probability(curscen) * (238 * y('wheat', curscen) + 210 * y('corn', curscen) - 170 * p('wheat', curscen) - 150 * p('corn', curscen) - 36 * p('sugarbeets', curscen)));
+  99   
+ 100  CVaRConstraint(curscen)..
+ 101      u(curscen) =g= (238 * y('wheat', curscen) + 210 * y('corn', curscen) - 170 * p('wheat', curscen) - 150 * p('corn', curscen) - 36 * p('sugarbeets', curscen)) - subgamma;
+ 102   
+ 103  wheatfeeding(curscen)..
+ 104      yield('wheat', curscen) * subX('wheat') + y('wheat', curscen) - p('wheat', curscen) =g= 200;
+ 105   
+ 106  cornfeeding(curscen)..
+ 107      yield('corn', curscen) * subX('corn') + y('corn', curscen) - p('corn', curscen) =g= 240;
+ 108   
+ 109  sellingBeets(curscen)..
+ 110      p('sugarbeets', curscen) =l= yield('sugarbeets', curscen) * subX('sugarbeets');
+ 111   
+ 112  setx(crops, curiter)..
+ 113      subX(crops) =e= oldX(crops, curiter);
+ 114   
+ 115  setgamma(curiter)..
+ 116      subgamma =e= oldgamma(curiter);
+ 117   
+ 118  model subproblem /subobj, CVaRConstraint, wheatfeeding, cornfeeding, sellingBeets, setx, setgamma/;
+ 119   
+ 120  ************************** Master Problem **************************
+ 121  equation cutcon(iter);
+ 122   
+ 123  cutcon(dyniter)..
+ 124      theta =g= weight * (sum(scenarios, [1/(1-alpha)] * (probability(scenarios) * oldU(scenarios, dyniter)))) +
+ 125                (1-weight) * (sum(scenarios, probability(scenarios) * (238 * oldY('wheat', scenarios, dyniter) + 210 * oldY('corn', scenarios, dyniter) - 170 * oldP('wheat', scenarios, dyniter) - 150 * oldP('corn', scenarios, dyniter) - 36 * oldP('sugarbeets', scenarios, dyniter)))) +
+ 126                (sum(crops, sum(scenarios, pi(scenarios, crops, dyniter) * (x(crops) - oldx(crops, dyniter))))) +
+ 127                (weight) * (sum(scenarios, phi(scenarios, dyniter) * (gamma - oldgamma(dyniter))));
+ 128   
+ 129  *              sum(scenarios, sum(crops, pi(scenarios, crops, dyniter) * (x(crops) - oldx(crops, dyniter)))
+ 130  *              + phi(scenarios, dyniter) * (gamma - oldgamma(dyniter)))
+ 131   
+ 132  model masterproblem /masterobj, plantamount, cutcon/;
+ 133   
+ 134  ************************** Benders Algorithm **************************
+ 135  *
+ 136  * Set initial values for bounds
+ 137  *
+ 138   
+ 139  *theta.lo = -INF;
+ 140  *theta.up = INF;
+ 141  *
+ 142  * Step 1: Solve master problem without cuts
+ 143  *
+ 144  dyniter(iter) = NO;
+ 145  curiter(iter) = NO;
+ 146  curscen(scenarios) = NO;
+ 147  *theta.fx = 0;
+ 148  solve initialmasterproblem minimizing zmaster using lp;
+ 149  display zmaster.l;
+ 150   
+ 151  scalar lowerbound /-INF/;
+ 152  scalar upperbound /INF/;
+ 153  parameter objsub(scenarios);
+ 154  scalar objmaster;
+ 155  objmaster = zmaster.l - theta.l;
+ 156  display objmaster;
+ 157   
+ 158  * Save the x and gamma values
+ 159  oldX(crops, 'iter1') = x.l(crops);
+ 160  oldgamma('iter1') = gamma.l;
+ 161   
+ 162   
+ 163  oldU(scenarios, 'iter1') = 0;
+ 164  pi(scenarios, crops, 'iter1') = 0;
+ 165  phi(scenarios, 'iter1') = 0;
+ 166  oldY(crops, scenarios, 'iter1') = 0;
+ 167  oldP(crops, scenarios, 'iter1') = 0;
+ 168   
+ 169  *option limrow = 0;
+ 170  *option limcol = 0;
+ 171  *subproblem.solprint = 0;
+ 172  *masterproblem.solprint = 0;
+ 173   
+ 174  scalar counter /1/;
+ 175      loop(iter,
+ 176  *If not first iteration, run master problem
+ 177      if (ord(iter) <> 1,
+ 178  * Step 4: Solve masterproblem, and go back to step 2
+ 179   
+ 180          solve masterproblem minimizing zmaster using lp;
+ 181  * Save values from master problem
+ 182          oldX(crops, iter) = x.l(crops);
+ 183          oldgamma(iter) = gamma.l;
+ 184          lowerbound = zmaster.l;
+ 185          objmaster = zmaster.l-theta.l;
+ 186          display lowerbound, x.l, oldY, oldP, pi, phi, gamma.l, theta.l;
+ 187  * Update curiter
+ 188          counter = counter + 1;
+ 189  *        abort$(counter = 10) "Done with 1000 iter";
+ 190      );
+ 191   
+ 192  *
+ 193  * Step 2: Solve subproblems
+ 194  *
+ 195      dyniter(iter) = yes;
+ 196      curiter(iter) = yes;
+ 197      loop(scenarios,
+ 198          curscen(scenarios) = yes;
+ 199          solve subproblem minimizing zsub using lp;
+ 200          display x.l;
+ 201          display p.l, y.l, gamma.l, theta.l;
+ 202  * Save values from this subproblem
+ 203          oldU(curscen, iter) = u.l(curscen);
+ 204          pi(scenarios, crops, iter) = setx.m(crops, iter);
+ 205          phi(scenarios, iter) = setgamma.m(iter);
+ 206          oldY(crops, scenarios, iter) = y.l(crops, scenarios);
+ 207          oldP(crops, scenarios, iter) = p.l(crops, scenarios);
+ 208          objsub(scenarios) = zsub.l;
+ 209  *        abort "Ran one subproblem";
+ 210          curscen(scenarios) = no;
+ 211      );
+ 212   
+ 213  upperbound = min(upperbound, objmaster + (weight) * ([1/(1-alpha)] * sum(scenarios, probability(scenarios) * oldU(scenarios, iter))) + (1-weight) * (sum(scenarios, probability(scenarios) * (238 * oldY('wheat', scenarios, iter) + 210 * oldY('corn', scenarios, iter) - 170 * oldP('wheat', scenarios, iter) - 150 * oldP('corn', scenarios, iter) - 36 * oldP('sugarbeets', scenarios, iter)))));
+ 214   
+ 215  *
+ 216  * Step 3: Check for convergence
+ 217  *
+ 218      display lowerbound,upperbound, counter, oldU, oldY, oldP;
+ 219      abort$(abs(upperbound-lowerbound) < 1000) "Converged";
+ 220  *    abort$( (upperbound-lowerbound) < 0.01*(1+(lowerbound)) ) "Converged";
+ 221  curiter(iter) = no;
+ 222   
+ 223  );
+
+
+COMPILATION TIME     =        0.002 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE initialmasterproblem Using LP From line 148
+
+
+---- masterobj  =E=  ’master objective function’
+
+masterobj..  - 150*x(wheat) - 230*x(corn) - 260*x(sugarbeets) + zmaster - theta - gamma =E= 0 ; (LHS = 0)
+     
+
+---- plantamount  =L=  constraint on first stage variables
+
+plantamount..  x(wheat) + x(corn) + x(sugarbeets) =L= 500 ; (LHS = 0)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE initialmasterproblem Using LP From line 148
+
+
+---- x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+x(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -150       masterobj
+        1       plantamount
+
+x(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -230       masterobj
+        1       plantamount
+
+x(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -260       masterobj
+        1       plantamount
+
+
+---- zmaster  ’objective variable of master problem’
+
+zmaster
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       masterobj
+
+
+---- theta  ’extra term in master obj’
+
+theta
+                (.LO, .L, .UP, .M = -500000000000, 0, +INF, 0)
+       -1       masterobj
+
+
+---- gamma  VaR
+
+gamma
+                (.LO, .L, .UP, .M = -500000000000, 0, +INF, 0)
+       -1       masterobj
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE initialmasterproblem Using LP From line 148
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 5.000E+02] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+11, 5.000E+11] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 2.600E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE initialmasterproblem Using LP From line 148
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           2     SINGLE EQUATIONS            2
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS             9
+
+
+GENERATION TIME      =        0.011 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 6
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE initialmasterproblem Using LP From line 148
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   initialmasterproblem   OBJECTIVE  zmaster
+     TYPE    LP                     DIRECTION  MINIMIZE
+     SOLVER  CPLEX                  FROM LINE  148
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE   -1000000000000.0000
+
+ RESOURCE USAGE, LIMIT          0.008 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.01sec (det. 0.00 ticks)
+
+
+Optimal solution found
+Objective:  -1000000000000.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU masterobj           .              .              .             1.0000      
+---- EQU plantamou~        -INF             .           500.0000          .          
+
+  masterobj  ’master objective function’
+  plantamount  constraint on first stage variables
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF          150.0000      
+corn                .              .            +INF          230.0000      
+sugarbeets          .              .            +INF          260.0000      
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zmaster           -INF      -1.00000E+12        +INF             .          
+---- VAR theta        -5.00000E+11   -5.00000E+11        +INF            1.0000      
+---- VAR gamma        -5.00000E+11   -5.00000E+11        +INF            1.0000      
+
+  zmaster  ’objective variable of master problem’
+  theta  ’extra term in master obj’
+  gamma  VaR
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 7
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    149 VARIABLE zmaster.L             =  -1.0000E+12  ’objective variable of master problem’
+
+----    156 PARAMETER objmaster            =  -5.0000E+11  
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 8
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(lo)..  - 0.5*u(lo) + zsub =E= 0 ; (LHS = 0)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(lo)..  170*p(wheat,lo) + 150*p(corn,lo) + 36*p(sugarbeets,lo) - 238*y(wheat,lo) - 210*y(corn,lo) + u(lo) + subgamma =G= 0 ; (LHS = 0)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(lo)..  - p(wheat,lo) + y(wheat,lo) + 2*subX(wheat) =G= 200 ; (LHS = 0, INFES = 200 ****)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(lo)..  - p(corn,lo) + y(corn,lo) + 2.4*subX(corn) =G= 240 ; (LHS = 0, INFES = 240 ****)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(lo)..  p(sugarbeets,lo) - 16*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter1)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter1)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter1)..  subX(sugarbeets) =E= 0 ; (LHS = 0)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter1)..  subgamma =E= -500000000000 ; (LHS = 0, INFES = 500000000000 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 9
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      170       CVaRConstraint(lo)
+       -1       wheatfeeding(lo)
+
+p(corn,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      150       CVaRConstraint(lo)
+       -1       cornfeeding(lo)
+
+p(sugarbeets,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(lo)
+        1       sellingBeets(lo)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -238       CVaRConstraint(lo)
+        1       wheatfeeding(lo)
+
+y(corn,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -210       CVaRConstraint(lo)
+        1       cornfeeding(lo)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -0.5     subobj(lo)
+        1       CVaRConstraint(lo)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2       wheatfeeding(lo)
+        1       setx(wheat,iter1)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2.4     cornfeeding(lo)
+        1       setx(corn,iter1)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -16       sellingBeets(lo)
+        1       setx(sugarbeets,iter1)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(lo)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       CVaRConstraint(lo)
+        1       setgamma(iter1)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 10
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 11
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 12
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE     250000048999.9999
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:  250000048999.999939
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter1          .              .              .          -238.0000      
+corn      .iter1          .              .              .          -252.0000      
+sugarbeets.iter1          .              .              .          -288.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1   -5.00000E+11   -5.00000E+11   -5.00000E+11        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .lo          .              .            +INF           34.0000      
+corn      .lo          .              .            +INF           30.0000      
+sugarbeets.lo          .              .            +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.lo          .           200.0000        +INF             .          
+corn .lo          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .       5.000001E+11        +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .              .            +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF      2.500000E+11        +INF             .          
+---- VAR subgamma          -INF      -5.00000E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 13
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo
+
+wheat     200.000
+corn      240.000
+
+
+----    201 VARIABLE gamma.L               =  -5.0000E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 14
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(mid)..  - 0.5*u(mid) + zsub =E= 0 ; (LHS = 250000049000, INFES = 250000049000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(mid)..  170*p(wheat,mid) + 150*p(corn,mid) + 36*p(sugarbeets,mid) - 238*y(wheat,mid) - 210*y(corn,mid) + u(mid) + subgamma =G= 0 ; (LHS = -500000000000, INFES = 500000000000 ****)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(mid)..  - p(wheat,mid) + y(wheat,mid) + 2.5*subX(wheat) =G= 200 ; (LHS = 0, INFES = 200 ****)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(mid)..  - p(corn,mid) + y(corn,mid) + 3*subX(corn) =G= 240 ; (LHS = 0, INFES = 240 ****)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(mid)..  p(sugarbeets,mid) - 20*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter1)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter1)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter1)..  subX(sugarbeets) =E= 0 ; (LHS = 0)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter1)..  subgamma =E= -500000000000 ; (LHS = -500000000000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 15
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      170       CVaRConstraint(mid)
+       -1       wheatfeeding(mid)
+
+p(corn,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      150       CVaRConstraint(mid)
+       -1       cornfeeding(mid)
+
+p(sugarbeets,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(mid)
+        1       sellingBeets(mid)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -238       CVaRConstraint(mid)
+        1       wheatfeeding(mid)
+
+y(corn,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -210       CVaRConstraint(mid)
+        1       cornfeeding(mid)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -0.5     subobj(mid)
+        1       CVaRConstraint(mid)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2.5     wheatfeeding(mid)
+        1       setx(wheat,iter1)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3       cornfeeding(mid)
+        1       setx(corn,iter1)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -20       sellingBeets(mid)
+        1       setx(sugarbeets,iter1)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 250000049000, +INF, 0)
+        1       subobj(mid)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -500000000000, +INF, 0)
+        1       CVaRConstraint(mid)
+        1       setgamma(iter1)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 16
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 17
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 18
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE     250000048999.9999
+
+ RESOURCE USAGE, LIMIT          0.001 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:  250000048999.999939
+
+
+---- EQU subobj  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter1          .              .              .          -297.5000      
+corn      .iter1          .              .              .          -315.0000      
+sugarbeets.iter1          .              .              .          -360.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1   -5.00000E+11   -5.00000E+11   -5.00000E+11        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                      LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .mid          .              .            +INF           34.0000      
+corn      .mid          .              .            +INF           30.0000      
+sugarbeets.mid          .              .            +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                 LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.mid          .           200.0000        +INF             .          
+corn .mid          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .       5.000001E+11        +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .              .            +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF      2.500000E+11        +INF             .          
+---- VAR subgamma          -INF      -5.00000E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 19
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid
+
+wheat     200.000     200.000
+corn      240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -5.0000E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 20
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(hi)..  - 0.5*u(hi) + zsub =E= 0 ; (LHS = 250000049000, INFES = 250000049000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(hi)..  170*p(wheat,hi) + 150*p(corn,hi) + 36*p(sugarbeets,hi) - 238*y(wheat,hi) - 210*y(corn,hi) + u(hi) + subgamma =G= 0 ; (LHS = -500000000000, INFES = 500000000000 ****)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(hi)..  - p(wheat,hi) + y(wheat,hi) + 3*subX(wheat) =G= 200 ; (LHS = 0, INFES = 200 ****)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(hi)..  - p(corn,hi) + y(corn,hi) + 3.6*subX(corn) =G= 240 ; (LHS = 0, INFES = 240 ****)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(hi)..  p(sugarbeets,hi) - 24*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter1)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter1)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter1)..  subX(sugarbeets) =E= 0 ; (LHS = 0)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter1)..  subgamma =E= -500000000000 ; (LHS = -500000000000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 21
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      170       CVaRConstraint(hi)
+       -1       wheatfeeding(hi)
+
+p(corn,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      150       CVaRConstraint(hi)
+       -1       cornfeeding(hi)
+
+p(sugarbeets,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(hi)
+        1       sellingBeets(hi)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -238       CVaRConstraint(hi)
+        1       wheatfeeding(hi)
+
+y(corn,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+     -210       CVaRConstraint(hi)
+        1       cornfeeding(hi)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -0.5     subobj(hi)
+        1       CVaRConstraint(hi)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3       wheatfeeding(hi)
+        1       setx(wheat,iter1)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3.6     cornfeeding(hi)
+        1       setx(corn,iter1)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -24       sellingBeets(hi)
+        1       setx(sugarbeets,iter1)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 250000049000, +INF, 0)
+        1       subobj(hi)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -500000000000, +INF, 0)
+        1       CVaRConstraint(hi)
+        1       setgamma(iter1)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 22
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 23
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter1
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter1
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 24
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE     250000048999.9999
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:  250000048999.999939
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter1          .              .              .          -357.0000      
+corn      .iter1          .              .              .          -378.0000      
+sugarbeets.iter1          .              .              .          -432.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1   -5.00000E+11   -5.00000E+11   -5.00000E+11        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .hi          .              .            +INF           34.0000      
+corn      .hi          .              .            +INF           30.0000      
+sugarbeets.hi          .              .            +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.hi          .           200.0000        +INF             .          
+corn .hi          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .       5.000001E+11        +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .              .            +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF      2.500000E+11        +INF             .          
+---- VAR subgamma          -INF      -5.00000E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 25
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                      ( ALL       0.000 )
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -5.0000E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+
+----    218 PARAMETER lowerbound           =         -INF  
+            PARAMETER upperbound           =  2.50000E+11  
+            PARAMETER counter              =        1.000  
+
+----    218 PARAMETER oldU  
+
+          iter1
+
+lo  5.00000E+11
+mid 5.00000E+11
+hi  5.00000E+11
+
+
+----    218 PARAMETER oldY  
+
+                iter1
+
+wheat.lo      200.000
+wheat.mid     200.000
+wheat.hi      200.000
+corn .lo      240.000
+corn .mid     240.000
+corn .hi      240.000
+
+
+----    218 PARAMETER oldP  
+
+                      ( ALL       0.000 )
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 26
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE masterproblem Using LP From line 180
+
+
+---- masterobj  =E=  ’master objective function’
+
+masterobj..  - 150*x(wheat) - 230*x(corn) - 260*x(sugarbeets) + zmaster - theta - gamma =E= 0 ; (LHS = 0)
+     
+
+---- plantamount  =L=  constraint on first stage variables
+
+plantamount..  x(wheat) + x(corn) + x(sugarbeets) =L= 500 ; (LHS = 0)
+     
+
+---- cutcon  =G=  
+
+cutcon(iter1)..  892.5*x(wheat) + 945*x(corn) + 1080*x(sugarbeets) + theta + 1.5*gamma =G= 147000 ; (LHS = -1250000000000, INFES = 1250000147000 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 27
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE masterproblem Using LP From line 180
+
+
+---- x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+x(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 150)
+     -150       masterobj
+        1       plantamount
+      892.5     cutcon(iter1)
+
+x(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 230)
+     -230       masterobj
+        1       plantamount
+      945       cutcon(iter1)
+
+x(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 260)
+     -260       masterobj
+        1       plantamount
+     1080       cutcon(iter1)
+
+
+---- zmaster  ’objective variable of master problem’
+
+zmaster
+                (.LO, .L, .UP, .M = -INF, -1000000000000, +INF, 0)
+        1       masterobj
+
+
+---- theta  ’extra term in master obj’
+
+theta
+                (.LO, .L, .UP, .M = -500000000000, -500000000000, +INF, 1)
+       -1       masterobj
+        1       cutcon(iter1)
+
+
+---- gamma  VaR
+
+gamma
+                (.LO, .L, .UP, .M = -500000000000, -500000000000, +INF, 1)
+       -1       masterobj
+        1.5     cutcon(iter1)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 28
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 180
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+11, 5.000E+11] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 29
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 180
+
+
+LOOPS                                 iter   iter2
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            3
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            14
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 30
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 180
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  180
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE    -166666798666.6666
+
+ RESOURCE USAGE, LIMIT          0.001 10000000000.000
+ ITERATION COUNT, LIMIT         3    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:  -166666798666.666565
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU masterobj           .              .              .             1.0000      
+---- EQU plantamou~        -INF          500.0000       500.0000      -460.0000      
+
+  masterobj  ’master objective function’
+  plantamount  constraint on first stage variables
+
+---- EQU cutcon  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1    147000.0000    147000.0000        +INF            0.6667      
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF           15.0000      
+corn                .              .            +INF           60.0000      
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zmaster           -INF      -1.66667E+11        +INF             .          
+---- VAR theta        -5.00000E+11   -5.00000E+11        +INF            0.3333      
+---- VAR gamma        -5.00000E+11   3.333331E+11        +INF             .          
+
+  zmaster  ’objective variable of master problem’
+  theta  ’extra term in master obj’
+  gamma  VaR
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 31
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    186 PARAMETER lowerbound           =  -1.6667E+11  
+
+----    186 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    186 PARAMETER oldY  
+
+                iter1
+
+wheat.lo      200.000
+wheat.mid     200.000
+wheat.hi      200.000
+corn .lo      240.000
+corn .mid     240.000
+corn .hi      240.000
+
+
+----    186 PARAMETER oldP  
+
+                      ( ALL       0.000 )
+
+
+----    186 PARAMETER pi  
+
+                     iter1
+
+lo .wheat         -238.000
+lo .corn          -252.000
+lo .sugarbeets    -288.000
+mid.wheat         -297.500
+mid.corn          -315.000
+mid.sugarbeets    -360.000
+hi .wheat         -357.000
+hi .corn          -378.000
+hi .sugarbeets    -432.000
+
+
+----    186 PARAMETER phi  
+
+          iter1
+
+lo       -0.500
+mid      -0.500
+hi       -0.500
+
+
+----    186 VARIABLE gamma.L               =  3.33333E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 32
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(lo)..  - 0.5*u(lo) + zsub =E= 0 ; (LHS = 0)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(lo)..  170*p(wheat,lo) + 150*p(corn,lo) + 36*p(sugarbeets,lo) - 238*y(wheat,lo) - 210*y(corn,lo) + u(lo) + subgamma =G= 0 ; (LHS = 0)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(lo)..  - p(wheat,lo) + y(wheat,lo) + 2*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(lo)..  - p(corn,lo) + y(corn,lo) + 2.4*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(lo)..  p(sugarbeets,lo) - 16*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter2)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter2)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter2)..  subX(sugarbeets) =E= 500 ; (LHS = 0, INFES = 500 ****)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter2)..  subgamma =E= 333333071333.333 ; (LHS = -500000000000, INFES = 833333071333.333 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 33
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 34)
+      170       CVaRConstraint(lo)
+       -1       wheatfeeding(lo)
+
+p(corn,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 30)
+      150       CVaRConstraint(lo)
+       -1       cornfeeding(lo)
+
+p(sugarbeets,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(lo)
+        1       sellingBeets(lo)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(lo)
+        1       wheatfeeding(lo)
+
+y(corn,lo)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(lo)
+        1       cornfeeding(lo)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(lo)
+                (.LO, .L, .UP, .M = 0, 500000098000, +INF, 0)
+       -0.5     subobj(lo)
+        1       CVaRConstraint(lo)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2       wheatfeeding(lo)
+        1       setx(wheat,iter2)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2.4     cornfeeding(lo)
+        1       setx(corn,iter2)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+      -16       sellingBeets(lo)
+        1       setx(sugarbeets,iter2)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 250000049000, +INF, 0)
+        1       subobj(lo)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -500000000000, +INF, 0)
+        1       CVaRConstraint(lo)
+        1       setgamma(iter2)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 34
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 35
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 36
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .       3.333333E+11        +INF             .          
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter2          .              .              .              .          
+corn      .iter2          .              .              .              .          
+sugarbeets.iter2       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter2   3.333331E+11   3.333331E+11   3.333331E+11         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .lo          .              .            +INF            EPS         
+corn      .lo          .              .            +INF            EPS         
+sugarbeets.lo          .          8000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.lo          .           200.0000        +INF             .          
+corn .lo          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      3.333331E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 37
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo
+
+sugarbeets    8000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  3.33333E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 38
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(mid)..  - 0.5*u(mid) + zsub =E= 0 ; (LHS = -250000049000, INFES = 250000049000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(mid)..  170*p(wheat,mid) + 150*p(corn,mid) + 36*p(sugarbeets,mid) - 238*y(wheat,mid) - 210*y(corn,mid) + u(mid) + subgamma =G= 0 ; (LHS = 833333071333.333)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(mid)..  - p(wheat,mid) + y(wheat,mid) + 2.5*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(mid)..  - p(corn,mid) + y(corn,mid) + 3*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(mid)..  p(sugarbeets,mid) - 20*subX(sugarbeets) =L= 0 ; (LHS = -10000)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter2)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter2)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter2)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter2)..  subgamma =E= 333333071333.333 ; (LHS = 333333071333.333)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 39
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 34)
+      170       CVaRConstraint(mid)
+       -1       wheatfeeding(mid)
+
+p(corn,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 30)
+      150       CVaRConstraint(mid)
+       -1       cornfeeding(mid)
+
+p(sugarbeets,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(mid)
+        1       sellingBeets(mid)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(mid)
+        1       wheatfeeding(mid)
+
+y(corn,mid)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(mid)
+        1       cornfeeding(mid)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(mid)
+                (.LO, .L, .UP, .M = 0, 500000098000, +INF, 0)
+       -0.5     subobj(mid)
+        1       CVaRConstraint(mid)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        2.5     wheatfeeding(mid)
+        1       setx(wheat,iter2)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        3       cornfeeding(mid)
+        1       setx(corn,iter2)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -20       sellingBeets(mid)
+        1       setx(sugarbeets,iter2)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(mid)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, 333333071333.333, +INF, 0)
+        1       CVaRConstraint(mid)
+        1       setgamma(iter2)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 40
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 41
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 42
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .       3.333333E+11        +INF             .          
+
+---- EQU wheatfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter2          .              .              .              .          
+corn      .iter2          .              .              .              .          
+sugarbeets.iter2       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter2   3.333331E+11   3.333331E+11   3.333331E+11         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                      LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .mid          .              .            +INF            EPS         
+corn      .mid          .              .            +INF            EPS         
+sugarbeets.mid          .         10000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                 LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.mid          .           200.0000        +INF             .          
+corn .mid          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      3.333331E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 43
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid
+
+sugarbeets    8000.000   10000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  3.33333E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 44
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(hi)..  - 0.5*u(hi) + zsub =E= 0 ; (LHS = -250000049000, INFES = 250000049000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(hi)..  170*p(wheat,hi) + 150*p(corn,hi) + 36*p(sugarbeets,hi) - 238*y(wheat,hi) - 210*y(corn,hi) + u(hi) + subgamma =G= 0 ; (LHS = 833333071333.333)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(hi)..  - p(wheat,hi) + y(wheat,hi) + 3*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(hi)..  - p(corn,hi) + y(corn,hi) + 3.6*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(hi)..  p(sugarbeets,hi) - 24*subX(sugarbeets) =L= 0 ; (LHS = -12000)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter2)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter2)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter2)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter2)..  subgamma =E= 333333071333.333 ; (LHS = 333333071333.333)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 45
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 34)
+      170       CVaRConstraint(hi)
+       -1       wheatfeeding(hi)
+
+p(corn,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 30)
+      150       CVaRConstraint(hi)
+       -1       cornfeeding(hi)
+
+p(sugarbeets,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       36       CVaRConstraint(hi)
+        1       sellingBeets(hi)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(hi)
+        1       wheatfeeding(hi)
+
+y(corn,hi)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(hi)
+        1       cornfeeding(hi)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(hi)
+                (.LO, .L, .UP, .M = 0, 500000098000, +INF, 0)
+       -0.5     subobj(hi)
+        1       CVaRConstraint(hi)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        3       wheatfeeding(hi)
+        1       setx(wheat,iter2)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        3.6     cornfeeding(hi)
+        1       setx(corn,iter2)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -24       sellingBeets(hi)
+        1       setx(sugarbeets,iter2)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(hi)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, 333333071333.333, +INF, 0)
+        1       CVaRConstraint(hi)
+        1       setgamma(iter2)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 46
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 3.333E+11] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 47
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter2
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter2
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 48
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .       3.333334E+11        +INF             .          
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter2          .              .              .              .          
+corn      .iter2          .              .              .              .          
+sugarbeets.iter2       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter2   3.333331E+11   3.333331E+11   3.333331E+11         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .hi          .              .            +INF            EPS         
+corn      .hi          .              .            +INF            EPS         
+sugarbeets.hi          .         12000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.hi          .           200.0000        +INF             .          
+corn .hi          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      3.333331E+11        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 49
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  3.33333E+11  VaR
+            VARIABLE theta.L               =  -5.0000E+11  ’extra term in master obj’
+
+----    218 PARAMETER lowerbound           =  -1.6667E+11  
+            PARAMETER upperbound           =  2.50000E+11  
+            PARAMETER counter              =        2.000  
+
+----    218 PARAMETER oldU  
+
+          iter1
+
+lo  5.00000E+11
+mid 5.00000E+11
+hi  5.00000E+11
+
+
+----    218 PARAMETER oldY  
+
+                iter1       iter2
+
+wheat.lo      200.000     200.000
+wheat.mid     200.000     200.000
+wheat.hi      200.000     200.000
+corn .lo      240.000     240.000
+corn .mid     240.000     240.000
+corn .hi      240.000     240.000
+
+
+----    218 PARAMETER oldP  
+
+                     iter2
+
+sugarbeets.lo     8000.000
+sugarbeets.mid   10000.000
+sugarbeets.hi    12000.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 50
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE masterproblem Using LP From line 180
+
+
+---- masterobj  =E=  ’master objective function’
+
+masterobj..  - 150*x(wheat) - 230*x(corn) - 260*x(sugarbeets) + zmaster - theta - gamma =E= 0 ; (LHS = 0)
+     
+
+---- plantamount  =L=  constraint on first stage variables
+
+plantamount..  x(wheat) + x(corn) + x(sugarbeets) =L= 500 ; (LHS = 500)
+     
+
+---- cutcon  =G=  
+
+cutcon(iter1)..  892.5*x(wheat) + 945*x(corn) + 1080*x(sugarbeets) + theta + 1.5*gamma =G= 147000 ; (LHS = 147000.000244141)
+     
+cutcon(iter2)..  EPS*x(sugarbeets) + theta + EPS*gamma =G= EPS ; (LHS = -500000000000, INFES = 500000000000 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 51
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE masterproblem Using LP From line 180
+
+
+---- x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+x(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 15)
+     -150       masterobj
+        1       plantamount
+      892.5     cutcon(iter1)
+
+x(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 60)
+     -230       masterobj
+        1       plantamount
+      945       cutcon(iter1)
+
+x(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+     -260       masterobj
+        1       plantamount
+     1080       cutcon(iter1)
+           EPS  cutcon(iter2)
+
+
+---- zmaster  ’objective variable of master problem’
+
+zmaster
+                (.LO, .L, .UP, .M = -INF, -166666798666.667, +INF, 0)
+        1       masterobj
+
+
+---- theta  ’extra term in master obj’
+
+theta
+                (.LO, .L, .UP, .M = -500000000000, -500000000000, +INF, 0.333333333333333)
+       -1       masterobj
+        1       cutcon(iter1)
+        1       cutcon(iter2)
+
+
+---- gamma  VaR
+
+gamma
+                (.LO, .L, .UP, .M = -500000000000, 333333071333.333, +INF, 0)
+       -1       masterobj
+        1.5     cutcon(iter1)
+           EPS  cutcon(iter2)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 52
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 180
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+11, 5.000E+11] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03] - Zero values observed as well
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 53
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 180
+
+
+LOOPS                                 iter   iter3
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            4
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            17
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 54
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 180
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  180
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE          -132000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:      -132000.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU masterobj           .              .              .             1.0000      
+---- EQU plantamou~        -INF          500.0000       500.0000      -460.0000      
+
+  masterobj  ’master objective function’
+  plantamount  constraint on first stage variables
+
+---- EQU cutcon  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1    147000.0000    147000.0000        +INF            0.6667      
+iter2          .              .            +INF            0.3333      
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF           15.0000      
+corn                .              .            +INF           60.0000      
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zmaster           -INF      -132000.0000        +INF             .          
+---- VAR theta        -5.00000E+11          .            +INF             .          
+---- VAR gamma        -5.00000E+11   -262000.0000        +INF             .          
+
+  zmaster  ’objective variable of master problem’
+  theta  ’extra term in master obj’
+  gamma  VaR
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 55
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    186 PARAMETER lowerbound           =  -132000.000  
+
+----    186 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    186 PARAMETER oldY  
+
+                iter1       iter2
+
+wheat.lo      200.000     200.000
+wheat.mid     200.000     200.000
+wheat.hi      200.000     200.000
+corn .lo      240.000     240.000
+corn .mid     240.000     240.000
+corn .hi      240.000     240.000
+
+
+----    186 PARAMETER oldP  
+
+                     iter2
+
+sugarbeets.lo     8000.000
+sugarbeets.mid   10000.000
+sugarbeets.hi    12000.000
+
+
+----    186 PARAMETER pi  
+
+                     iter1       iter2
+
+lo .wheat         -238.000
+lo .corn          -252.000
+lo .sugarbeets    -288.000         EPS
+mid.wheat         -297.500
+mid.corn          -315.000
+mid.sugarbeets    -360.000         EPS
+hi .wheat         -357.000
+hi .corn          -378.000
+hi .sugarbeets    -432.000         EPS
+
+
+----    186 PARAMETER phi  
+
+          iter1       iter2
+
+lo       -0.500         EPS
+mid      -0.500         EPS
+hi       -0.500         EPS
+
+
+----    186 VARIABLE gamma.L               =  -262000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 56
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(lo)..  - 0.5*u(lo) + zsub =E= 0 ; (LHS = 0)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(lo)..  170*p(wheat,lo) + 150*p(corn,lo) + 36*p(sugarbeets,lo) - 238*y(wheat,lo) - 210*y(corn,lo) + u(lo) + subgamma =G= 0 ; (LHS = 333333261333.333)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(lo)..  - p(wheat,lo) + y(wheat,lo) + 2*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(lo)..  - p(corn,lo) + y(corn,lo) + 2.4*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(lo)..  p(sugarbeets,lo) - 16*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter3)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter3)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter3)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter3)..  subgamma =E= -262000 ; (LHS = 333333071333.333, INFES = 333333333333.333 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 57
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      170       CVaRConstraint(lo)
+       -1       wheatfeeding(lo)
+
+p(corn,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      150       CVaRConstraint(lo)
+       -1       cornfeeding(lo)
+
+p(sugarbeets,lo)
+                (.LO, .L, .UP, .M = 0, 8000, +INF, 0)
+       36       CVaRConstraint(lo)
+        1       sellingBeets(lo)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(lo)
+        1       wheatfeeding(lo)
+
+y(corn,lo)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(lo)
+        1       cornfeeding(lo)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.5)
+       -0.5     subobj(lo)
+        1       CVaRConstraint(lo)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        2       wheatfeeding(lo)
+        1       setx(wheat,iter3)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        2.4     cornfeeding(lo)
+        1       setx(corn,iter3)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -16       sellingBeets(lo)
+        1       setx(sugarbeets,iter3)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(lo)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, 333333071333.333, +INF, 0)
+        1       CVaRConstraint(lo)
+        1       setgamma(iter3)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 58
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 59
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 60
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE            36000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:        36000.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter3          .              .              .          -238.0000      
+corn      .iter3          .              .              .          -252.0000      
+sugarbeets.iter3       500.0000       500.0000       500.0000      -288.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter3   -262000.0000   -262000.0000   -262000.0000        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .lo          .              .            +INF           34.0000      
+corn      .lo          .              .            +INF           30.0000      
+sugarbeets.lo          .          8000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.lo          .           200.0000        +INF             .          
+corn .lo          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .         72000.0000        +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF        36000.0000        +INF             .          
+---- VAR subgamma          -INF      -262000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 61
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -262000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 62
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(mid)..  - 0.5*u(mid) + zsub =E= 0 ; (LHS = 36000, INFES = 36000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(mid)..  170*p(wheat,mid) + 150*p(corn,mid) + 36*p(sugarbeets,mid) - 238*y(wheat,mid) - 210*y(corn,mid) + u(mid) + subgamma =G= 0 ; (LHS = 2.91038304567337E-11)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(mid)..  - p(wheat,mid) + y(wheat,mid) + 2.5*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(mid)..  - p(corn,mid) + y(corn,mid) + 3*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(mid)..  p(sugarbeets,mid) - 20*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter3)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter3)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter3)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter3)..  subgamma =E= -262000 ; (LHS = -262000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 63
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      170       CVaRConstraint(mid)
+       -1       wheatfeeding(mid)
+
+p(corn,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      150       CVaRConstraint(mid)
+       -1       cornfeeding(mid)
+
+p(sugarbeets,mid)
+                (.LO, .L, .UP, .M = 0, 10000, +INF, 0)
+       36       CVaRConstraint(mid)
+        1       sellingBeets(mid)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(mid)
+        1       wheatfeeding(mid)
+
+y(corn,mid)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(mid)
+        1       cornfeeding(mid)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.5)
+       -0.5     subobj(mid)
+        1       CVaRConstraint(mid)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2.5     wheatfeeding(mid)
+        1       setx(wheat,iter3)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3       cornfeeding(mid)
+        1       setx(corn,iter3)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -20       sellingBeets(mid)
+        1       setx(sugarbeets,iter3)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 36000, +INF, 0)
+        1       subobj(mid)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -262000, +INF, 0)
+        1       CVaRConstraint(mid)
+        1       setgamma(iter3)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 64
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 65
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 66
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter3          .              .              .          -297.5000      
+corn      .iter3          .              .              .          -315.0000      
+sugarbeets.iter3       500.0000       500.0000       500.0000      -360.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter3   -262000.0000   -262000.0000   -262000.0000        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                      LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .mid          .              .            +INF           34.0000      
+corn      .mid          .              .            +INF           30.0000      
+sugarbeets.mid          .         10000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                 LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.mid          .           200.0000        +INF             .          
+corn .mid          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .            +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      -262000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 67
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -262000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 68
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(hi)..  - 0.5*u(hi) + zsub =E= 0 ; (LHS = 0)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(hi)..  170*p(wheat,hi) + 150*p(corn,hi) + 36*p(sugarbeets,hi) - 238*y(wheat,hi) - 210*y(corn,hi) + u(hi) + subgamma =G= 0 ; (LHS = 72000)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(hi)..  - p(wheat,hi) + y(wheat,hi) + 3*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(hi)..  - p(corn,hi) + y(corn,hi) + 3.6*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(hi)..  p(sugarbeets,hi) - 24*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter3)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter3)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter3)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter3)..  subgamma =E= -262000 ; (LHS = -262000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 69
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      170       CVaRConstraint(hi)
+       -1       wheatfeeding(hi)
+
+p(corn,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      150       CVaRConstraint(hi)
+       -1       cornfeeding(hi)
+
+p(sugarbeets,hi)
+                (.LO, .L, .UP, .M = 0, 12000, +INF, 0)
+       36       CVaRConstraint(hi)
+        1       sellingBeets(hi)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(hi)
+        1       wheatfeeding(hi)
+
+y(corn,hi)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(hi)
+        1       cornfeeding(hi)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.5)
+       -0.5     subobj(hi)
+        1       CVaRConstraint(hi)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3       wheatfeeding(hi)
+        1       setx(wheat,iter3)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3.6     cornfeeding(hi)
+        1       setx(corn,iter3)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -24       sellingBeets(hi)
+        1       setx(sugarbeets,iter3)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(hi)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -262000, +INF, 0)
+        1       CVaRConstraint(hi)
+        1       setgamma(iter3)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 70
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.620E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 71
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter3
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter3
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 72
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .         72000.0000        +INF             .          
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter3          .              .              .              .          
+corn      .iter3          .              .              .              .          
+sugarbeets.iter3       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter3   -262000.0000   -262000.0000   -262000.0000         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .hi          .              .            +INF            EPS         
+corn      .hi          .              .            +INF            EPS         
+sugarbeets.hi          .         12000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.hi          .           200.0000        +INF             .          
+corn .hi          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      -262000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 73
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -262000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+
+----    218 PARAMETER lowerbound           =  -132000.000  
+            PARAMETER upperbound           =   -96000.000  
+            PARAMETER counter              =        3.000  
+
+----    218 PARAMETER oldU  
+
+          iter1       iter3
+
+lo  5.00000E+11   72000.000
+mid 5.00000E+11
+hi  5.00000E+11
+
+
+----    218 PARAMETER oldY  
+
+                iter1       iter2       iter3
+
+wheat.lo      200.000     200.000     200.000
+wheat.mid     200.000     200.000     200.000
+wheat.hi      200.000     200.000     200.000
+corn .lo      240.000     240.000     240.000
+corn .mid     240.000     240.000     240.000
+corn .hi      240.000     240.000     240.000
+
+
+----    218 PARAMETER oldP  
+
+                     iter2       iter3
+
+sugarbeets.lo     8000.000    8000.000
+sugarbeets.mid   10000.000   10000.000
+sugarbeets.hi    12000.000   12000.000
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 74
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE masterproblem Using LP From line 180
+
+
+---- masterobj  =E=  ’master objective function’
+
+masterobj..  - 150*x(wheat) - 230*x(corn) - 260*x(sugarbeets) + zmaster - theta - gamma =E= 0 ; (LHS = 0)
+     
+
+---- plantamount  =L=  constraint on first stage variables
+
+plantamount..  x(wheat) + x(corn) + x(sugarbeets) =L= 500 ; (LHS = 500)
+     
+
+---- cutcon  =G=  
+
+cutcon(iter1)..  892.5*x(wheat) + 945*x(corn) + 1080*x(sugarbeets) + theta + 1.5*gamma =G= 147000 ; (LHS = 147000)
+     
+cutcon(iter2)..  EPS*x(sugarbeets) + theta + EPS*gamma =G= EPS ; (LHS = EPS)
+     
+cutcon(iter3)..  535.5*x(wheat) + 567*x(corn) + 648*x(sugarbeets) + theta + 1*gamma =G= 98000 ; (LHS = 62000, INFES = 36000 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 75
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE masterproblem Using LP From line 180
+
+
+---- x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+x(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 15)
+     -150       masterobj
+        1       plantamount
+      892.5     cutcon(iter1)
+      535.5     cutcon(iter3)
+
+x(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 60)
+     -230       masterobj
+        1       plantamount
+      945       cutcon(iter1)
+      567       cutcon(iter3)
+
+x(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+     -260       masterobj
+        1       plantamount
+     1080       cutcon(iter1)
+           EPS  cutcon(iter2)
+      648       cutcon(iter3)
+
+
+---- zmaster  ’objective variable of master problem’
+
+zmaster
+                (.LO, .L, .UP, .M = -INF, -132000, +INF, 0)
+        1       masterobj
+
+
+---- theta  ’extra term in master obj’
+
+theta
+                (.LO, .L, .UP, .M = -500000000000, 0, +INF, 0)
+       -1       masterobj
+        1       cutcon(iter1)
+        1       cutcon(iter2)
+        1       cutcon(iter3)
+
+
+---- gamma  VaR
+
+gamma
+                (.LO, .L, .UP, .M = -500000000000, -262000, +INF, 0)
+       -1       masterobj
+        1.5     cutcon(iter1)
+           EPS  cutcon(iter2)
+        1       cutcon(iter3)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 76
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE masterproblem Using LP From line 180
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 5.000E+02, 1.470E+05] - Zero values observed as well
+Bound     [min, max] : [ 5.000E+11, 5.000E+11] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 1.080E+03] - Zero values observed as well
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 77
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE masterproblem Using LP From line 180
+
+
+LOOPS                                 iter   iter4
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           3     SINGLE EQUATIONS            5
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES            6
+NON ZERO ELEMENTS            22
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 78
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE masterproblem Using LP From line 180
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   masterproblem       OBJECTIVE  zmaster
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  180
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE           -96000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         1    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:       -96000.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU masterobj           .              .              .             1.0000      
+---- EQU plantamou~        -INF          500.0000       500.0000      -388.0000      
+
+  masterobj  ’master objective function’
+  plantamount  constraint on first stage variables
+
+---- EQU cutcon  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter1    147000.0000    201000.0000        +INF             .          
+iter2          .              .            +INF            EPS         
+iter3     98000.0000     98000.0000        +INF            1.0000      
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            2.5000      
+corn                .              .            +INF           51.0000      
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zmaster           -INF       -96000.0000        +INF             .          
+---- VAR theta        -5.00000E+11          .            +INF             .          
+---- VAR gamma        -5.00000E+11   -226000.0000        +INF             .          
+
+  zmaster  ’objective variable of master problem’
+  theta  ’extra term in master obj’
+  gamma  VaR
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 79
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    186 PARAMETER lowerbound           =   -96000.000  
+
+----    186 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    186 PARAMETER oldY  
+
+                iter1       iter2       iter3
+
+wheat.lo      200.000     200.000     200.000
+wheat.mid     200.000     200.000     200.000
+wheat.hi      200.000     200.000     200.000
+corn .lo      240.000     240.000     240.000
+corn .mid     240.000     240.000     240.000
+corn .hi      240.000     240.000     240.000
+
+
+----    186 PARAMETER oldP  
+
+                     iter2       iter3
+
+sugarbeets.lo     8000.000    8000.000
+sugarbeets.mid   10000.000   10000.000
+sugarbeets.hi    12000.000   12000.000
+
+
+----    186 PARAMETER pi  
+
+                     iter1       iter2       iter3
+
+lo .wheat         -238.000                -238.000
+lo .corn          -252.000                -252.000
+lo .sugarbeets    -288.000         EPS    -288.000
+mid.wheat         -297.500                -297.500
+mid.corn          -315.000                -315.000
+mid.sugarbeets    -360.000         EPS    -360.000
+hi .wheat         -357.000
+hi .corn          -378.000
+hi .sugarbeets    -432.000         EPS         EPS
+
+
+----    186 PARAMETER phi  
+
+          iter1       iter2       iter3
+
+lo       -0.500         EPS      -0.500
+mid      -0.500         EPS      -0.500
+hi       -0.500         EPS         EPS
+
+
+----    186 VARIABLE gamma.L               =  -226000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 80
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(lo)..  - 0.5*u(lo) + zsub =E= 0 ; (LHS = -36000, INFES = 36000 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(lo)..  170*p(wheat,lo) + 150*p(corn,lo) + 36*p(sugarbeets,lo) - 238*y(wheat,lo) - 210*y(corn,lo) + u(lo) + subgamma =G= 0 ; (LHS = 2.91038304567337E-11)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(lo)..  - p(wheat,lo) + y(wheat,lo) + 2*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(lo)..  - p(corn,lo) + y(corn,lo) + 2.4*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(lo)..  p(sugarbeets,lo) - 16*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter4)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter4)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter4)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter4)..  subgamma =E= -226000 ; (LHS = -262000, INFES = 36000.0000000001 ****)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 81
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 34)
+      170       CVaRConstraint(lo)
+       -1       wheatfeeding(lo)
+
+p(corn,lo)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 30)
+      150       CVaRConstraint(lo)
+       -1       cornfeeding(lo)
+
+p(sugarbeets,lo)
+                (.LO, .L, .UP, .M = 0, 8000, +INF, 0)
+       36       CVaRConstraint(lo)
+        1       sellingBeets(lo)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,lo)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(lo)
+        1       wheatfeeding(lo)
+
+y(corn,lo)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(lo)
+        1       cornfeeding(lo)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(lo)
+                (.LO, .L, .UP, .M = 0, 72000, +INF, 0)
+       -0.5     subobj(lo)
+        1       CVaRConstraint(lo)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        2       wheatfeeding(lo)
+        1       setx(wheat,iter4)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        2.4     cornfeeding(lo)
+        1       setx(corn,iter4)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -16       sellingBeets(lo)
+        1       setx(sugarbeets,iter4)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(lo)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -262000, +INF, 0)
+        1       CVaRConstraint(lo)
+        1       setgamma(iter4)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 82
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 83
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   lo
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.000 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios lo
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 84
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE            18000.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:        18000.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .              .            +INF            0.5000      
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       200.0000       200.0000        +INF          119.0000      
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo       240.0000       240.0000        +INF          105.0000      
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo        -INF             .              .           -18.0000      
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter4          .              .              .          -238.0000      
+corn      .iter4          .              .              .          -252.0000      
+sugarbeets.iter4       500.0000       500.0000       500.0000      -288.0000      
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter4   -226000.0000   -226000.0000   -226000.0000        -0.5000      
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .lo          .              .            +INF           34.0000      
+corn      .lo          .              .            +INF           30.0000      
+sugarbeets.lo          .          8000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.lo          .           200.0000        +INF             .          
+corn .lo          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+lo          .         36000.0000        +INF             .          
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF             .          
+corn                .              .            +INF             .          
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF        18000.0000        +INF             .          
+---- VAR subgamma          -INF      -226000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 85
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -226000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 86
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(mid)..  - 0.5*u(mid) + zsub =E= 0 ; (LHS = 17999.9999999999, INFES = 17999.9999999999 ****)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(mid)..  170*p(wheat,mid) + 150*p(corn,mid) + 36*p(sugarbeets,mid) - 238*y(wheat,mid) - 210*y(corn,mid) + u(mid) + subgamma =G= 0 ; (LHS = 36000.0000000001)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(mid)..  - p(wheat,mid) + y(wheat,mid) + 2.5*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(mid)..  - p(corn,mid) + y(corn,mid) + 3*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(mid)..  p(sugarbeets,mid) - 20*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter4)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter4)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter4)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter4)..  subgamma =E= -226000 ; (LHS = -226000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 87
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 34)
+      170       CVaRConstraint(mid)
+       -1       wheatfeeding(mid)
+
+p(corn,mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 30)
+      150       CVaRConstraint(mid)
+       -1       cornfeeding(mid)
+
+p(sugarbeets,mid)
+                (.LO, .L, .UP, .M = 0, 10000, +INF, 0)
+       36       CVaRConstraint(mid)
+        1       sellingBeets(mid)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,mid)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(mid)
+        1       wheatfeeding(mid)
+
+y(corn,mid)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(mid)
+        1       cornfeeding(mid)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(mid)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+       -0.5     subobj(mid)
+        1       CVaRConstraint(mid)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        2.5     wheatfeeding(mid)
+        1       setx(wheat,iter4)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0)
+        3       cornfeeding(mid)
+        1       setx(corn,iter4)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -20       sellingBeets(mid)
+        1       setx(sugarbeets,iter4)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 17999.9999999999, +INF, 0)
+        1       subobj(mid)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -226000, +INF, 0)
+        1       CVaRConstraint(mid)
+        1       setgamma(iter4)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 88
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 89
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   mid
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios mid
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 90
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .         36000.0000        +INF             .          
+
+---- EQU wheatfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter4          .              .              .              .          
+corn      .iter4          .              .              .              .          
+sugarbeets.iter4       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter4   -226000.0000   -226000.0000   -226000.0000         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                      LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .mid          .              .            +INF            EPS         
+corn      .mid          .              .            +INF            EPS         
+sugarbeets.mid          .         10000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                 LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.mid          .           200.0000        +INF             .          
+corn .mid          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+           LOWER          LEVEL          UPPER         MARGINAL
+
+mid          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      -226000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 91
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -226000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 92
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Equation Listing    SOLVE subproblem Using LP From line 199
+
+
+---- subobj  =E=  
+
+subobj(hi)..  - 0.5*u(hi) + zsub =E= 0 ; (LHS = 0)
+     
+
+---- CVaRConstraint  =G=  
+
+CVaRConstraint(hi)..  170*p(wheat,hi) + 150*p(corn,hi) + 36*p(sugarbeets,hi) - 238*y(wheat,hi) - 210*y(corn,hi) + u(hi) + subgamma =G= 0 ; (LHS = 108000)
+     
+
+---- wheatfeeding  =G=  
+
+wheatfeeding(hi)..  - p(wheat,hi) + y(wheat,hi) + 3*subX(wheat) =G= 200 ; (LHS = 200)
+     
+
+---- cornfeeding  =G=  
+
+cornfeeding(hi)..  - p(corn,hi) + y(corn,hi) + 3.6*subX(corn) =G= 240 ; (LHS = 240)
+     
+
+---- sellingBeets  =L=  
+
+sellingBeets(hi)..  p(sugarbeets,hi) - 24*subX(sugarbeets) =L= 0 ; (LHS = 0)
+     
+
+---- setx  =E=  
+
+setx(wheat,iter4)..  subX(wheat) =E= 0 ; (LHS = 0)
+     
+setx(corn,iter4)..  subX(corn) =E= 0 ; (LHS = 0)
+     
+setx(sugarbeets,iter4)..  subX(sugarbeets) =E= 500 ; (LHS = 500)
+     
+
+---- setgamma  =E=  
+
+setgamma(iter4)..  subgamma =E= -226000 ; (LHS = -226000)
+     
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 93
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Column Listing      SOLVE subproblem Using LP From line 199
+
+
+---- p  # of tons of each type of crops to sell in each scenario
+
+p(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      170       CVaRConstraint(hi)
+       -1       wheatfeeding(hi)
+
+p(corn,hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+      150       CVaRConstraint(hi)
+       -1       cornfeeding(hi)
+
+p(sugarbeets,hi)
+                (.LO, .L, .UP, .M = 0, 12000, +INF, 0)
+       36       CVaRConstraint(hi)
+        1       sellingBeets(hi)
+
+
+---- y  # of tons of wheat/corn to buy in each scenario
+
+y(wheat,hi)
+                (.LO, .L, .UP, .M = 0, 200, +INF, 0)
+     -238       CVaRConstraint(hi)
+        1       wheatfeeding(hi)
+
+y(corn,hi)
+                (.LO, .L, .UP, .M = 0, 240, +INF, 0)
+     -210       CVaRConstraint(hi)
+        1       cornfeeding(hi)
+
+
+---- u  auxiliary variables for reformulation of CVaR
+
+u(hi)
+                (.LO, .L, .UP, .M = 0, 0, +INF, 0.5)
+       -0.5     subobj(hi)
+        1       CVaRConstraint(hi)
+
+
+---- subX  
+
+subX(wheat)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        3       wheatfeeding(hi)
+        1       setx(wheat,iter4)
+
+subX(corn)
+                (.LO, .L, .UP, .M = 0, 0, +INF, EPS)
+        3.6     cornfeeding(hi)
+        1       setx(corn,iter4)
+
+subX(sugarbeets)
+                (.LO, .L, .UP, .M = 0, 500, +INF, 0)
+      -24       sellingBeets(hi)
+        1       setx(sugarbeets,iter4)
+
+
+---- zsub  
+
+zsub
+                (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
+        1       subobj(hi)
+
+
+---- subgamma  
+
+subgamma
+                (.LO, .L, .UP, .M = -INF, -226000, +INF, 0)
+        1       CVaRConstraint(hi)
+        1       setgamma(iter4)
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 94
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE subproblem Using LP From line 199
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 2.260E+05] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 5.000E-01, 2.380E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 95
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE subproblem Using LP From line 199
+
+
+LOOPS                                 iter   iter4
+                                 scenarios   hi
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS            9
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           11
+NON ZERO ELEMENTS            21
+
+
+GENERATION TIME      =        0.001 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+               L O O P S               iter iter4
+                                  scenarios hi
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 96
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE subproblem Using LP From line 199
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   subproblem          OBJECTIVE  zsub
+     TYPE    LP                  DIRECTION  MINIMIZE
+     SOLVER  CPLEX               FROM LINE  199
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE                0.0000
+
+ RESOURCE USAGE, LIMIT          0.000 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.00sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:            0.000000
+
+
+---- EQU subobj  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .              .             1.0000      
+
+---- EQU CVaRConstraint  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .        108000.0000        +INF             .          
+
+---- EQU wheatfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       200.0000       200.0000        +INF            EPS         
+
+---- EQU cornfeeding  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi       240.0000       240.0000        +INF            EPS         
+
+---- EQU sellingBeets  
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi        -INF             .              .             EPS         
+
+---- EQU setx  
+
+                        LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .iter4          .              .              .              .          
+corn      .iter4          .              .              .              .          
+sugarbeets.iter4       500.0000       500.0000       500.0000         EPS         
+
+---- EQU setgamma  
+
+             LOWER          LEVEL          UPPER         MARGINAL
+
+iter4   -226000.0000   -226000.0000   -226000.0000         EPS         
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .hi          .              .            +INF            EPS         
+corn      .hi          .              .            +INF            EPS         
+sugarbeets.hi          .         12000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.hi          .           200.0000        +INF             .          
+corn .hi          .           240.0000        +INF             .          
+
+---- VAR u  auxiliary variables for reformulation of CVaR
+
+          LOWER          LEVEL          UPPER         MARGINAL
+
+hi          .              .            +INF            0.5000      
+
+---- VAR subX  
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF            EPS         
+corn                .              .            +INF            EPS         
+sugarbeets          .           500.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR zsub              -INF             .            +INF             .          
+---- VAR subgamma          -INF      -226000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 14:55:41 Page 97
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----    200 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----    201 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                    lo         mid          hi
+
+sugarbeets    8000.000   10000.000   12000.000
+
+
+----    201 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+               lo         mid          hi
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+----    201 VARIABLE gamma.L               =  -226000.000  VaR
+            VARIABLE theta.L               =        0.000  ’extra term in master obj’
+
+----    218 PARAMETER lowerbound           =   -96000.000  
+            PARAMETER upperbound           =   -96000.000  
+            PARAMETER counter              =        4.000  
+
+----    218 PARAMETER oldU  
+
+          iter1       iter3       iter4
+
+lo  5.00000E+11   72000.000   36000.000
+mid 5.00000E+11
+hi  5.00000E+11
+
+
+----    218 PARAMETER oldY  
+
+                iter1       iter2       iter3       iter4
+
+wheat.lo      200.000     200.000     200.000     200.000
+wheat.mid     200.000     200.000     200.000     200.000
+wheat.hi      200.000     200.000     200.000     200.000
+corn .lo      240.000     240.000     240.000     240.000
+corn .mid     240.000     240.000     240.000     240.000
+corn .hi      240.000     240.000     240.000     240.000
+
+
+----    218 PARAMETER oldP  
+
+                     iter2       iter3       iter4
+
+sugarbeets.lo     8000.000    8000.000    8000.000
+sugarbeets.mid   10000.000   10000.000   10000.000
+sugarbeets.hi    12000.000   12000.000   12000.000
+
+
+----    219 Converged
+**** Exec Error at line 219: Execution halted: abort$1 'Converged'
+
+
+EXECUTION TIME       =        0.216 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVAR Contrast behavior 2.gms
+Output     /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVAR Contrast behavior 2.lst
+
+**** USER ERROR(S) ENCOUNTERED

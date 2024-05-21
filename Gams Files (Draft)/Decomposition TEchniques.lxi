@@ -1,0 +1,14 @@
+B 3 C o m p i l a t i o n
+B 42 Range Statistics    SOLVE hw1_1 Using LP From line 22
+B 53 Model Statistics    SOLVE hw1_1 Using LP From line 22
+B 66 Solution Report     SOLVE hw1_1 Using LP From line 22
+F 99 objective
+F 100 constraint1
+F 101 constraint2
+G 105 x1
+G 106 x2
+G 107 obj
+B 115 E x e c u t i o n
+I 117 obj
+I 118 x1
+I 119 x2

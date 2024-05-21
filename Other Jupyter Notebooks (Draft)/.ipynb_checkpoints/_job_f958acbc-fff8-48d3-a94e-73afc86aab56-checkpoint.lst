@@ -1,0 +1,40 @@
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:07:12 Page 94
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+GDXIN   /Users/hongkai/Desktop/Optimization/jup/_gdx_in_a9f9b76e-9072-4c3f-a35c-809e692b475b.gdx
+ 273  execute_unload '/Users/hongkai/Desktop/Optimization/jup/_gdx_out_a9f9b76e-9072-4c3f-a35c-809e692b475b.gdx'
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:07:12 Page 95
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Include File Summary
+
+
+   SEQ   GLOBAL TYPE      PARENT   LOCAL  FILENAME
+
+     1        1 INPUT          0       0  /Users/hongkai/Desktop/Optimization/jup/_job_f958acbc-fff8-48d3-a94e-73afc86aab56.gms
+     2      270 GDXIN          1       3  /Users/hongkai/Desktop/Optimization/jup/_gdx_in_a9f9b76e-9072-4c3f-a35c-809e692b475b.gdx
+
+
+COMPILATION TIME     =        0.000 SECONDS      3 MB  45.7.0 64fbf3ce DAX-DAC
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:07:12 Page 96
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+EXECUTION TIME       =        0.000 SECONDS      4 MB  45.7.0 64fbf3ce DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Restart    /Users/hongkai/Desktop/Optimization/jup/_save_a9f9b76e-9072-4c3f-a35c-809e692b475b.g00
+Input      /Users/hongkai/Desktop/Optimization/jup/_job_f958acbc-fff8-48d3-a94e-73afc86aab56.gms
+Output     /Users/hongkai/Desktop/Optimization/jup/_job_f958acbc-fff8-48d3-a94e-73afc86aab56.lst
+Save       /Users/hongkai/Desktop/Optimization/jup/_restart_a9f9b76e-9072-4c3f-a35c-809e692b475b.g00
+
+**** WARNING - COMPILER OPTIONS ARE NON DEFAULT     ONEMPTY

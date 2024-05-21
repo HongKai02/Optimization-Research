@@ -1,0 +1,22 @@
+B 3 C o m p i l a t i o n
+B 88 Range Statistics    SOLVE statisticalFarming Using LP From line 73
+B 99 Model Statistics    SOLVE statisticalFarming Using LP From line 73
+B 112 Solution Report     SOLVE statisticalFarming Using LP From line 73
+F 145 objective
+F 146 firstStage
+F 148 wheatfeeding
+F 156 cornfeeding
+F 164 sellingBeets
+F 172 CVaR
+G 180 x
+G 188 p
+G 202 y
+G 213 u
+G 223 obj
+G 224 gamma
+B 232 E x e c u t i o n
+I 232 x
+I 238 p
+I 245 y
+I 253 u
+I 259 gamma

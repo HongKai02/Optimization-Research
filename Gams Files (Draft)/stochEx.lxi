@@ -1,0 +1,327 @@
+B 3 C o m p i l a t i o n
+B 176 Equation Listing    SOLVE masterproblem Using LP From line 115
+D 179 masterobj
+D 184 receive
+D 195 production
+D 204 prodcap
+D 213 optcut
+B 219 Column Listing      SOLVE masterproblem Using LP From line 115
+E 222 ship
+E 244 product
+E 265 slackproduct
+E 280 received
+E 296 zmaster
+E 303 theta
+B 311 Range Statistics    SOLVE masterproblem Using LP From line 115
+B 322 Model Statistics    SOLVE masterproblem Using LP From line 115
+B 335 Solution Report     SOLVE masterproblem Using LP From line 115
+F 368 masterobj
+F 372 receive
+F 382 production
+F 390 prodcap
+F 398 optcut
+G 403 ship
+G 423 product
+G 431 slackproduct
+G 439 received
+G 451 zmaster
+G 452 theta
+B 463 Range Statistics    SOLVE subproblem Using LP From line 142
+B 474 Model Statistics    SOLVE subproblem Using LP From line 142
+B 494 Solution Report     SOLVE subproblem Using LP From line 142
+B 531 Range Statistics    SOLVE subproblem Using LP From line 142
+B 542 Model Statistics    SOLVE subproblem Using LP From line 142
+B 562 Solution Report     SOLVE subproblem Using LP From line 142
+B 599 Range Statistics    SOLVE subproblem Using LP From line 142
+B 610 Model Statistics    SOLVE subproblem Using LP From line 142
+B 630 Solution Report     SOLVE subproblem Using LP From line 142
+B 667 E x e c u t i o n
+I 669 lowerbound
+I 670 upperbound
+I 672 lowerbound
+B 676 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 687 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 705 Solution Report     SOLVE masterproblem Using LP From line 160
+B 742 E x e c u t i o n
+I 742 ship
+I 753 objmaster
+B 757 Range Statistics    SOLVE subproblem Using LP From line 142
+B 768 Model Statistics    SOLVE subproblem Using LP From line 142
+B 788 Solution Report     SOLVE subproblem Using LP From line 142
+B 825 Range Statistics    SOLVE subproblem Using LP From line 142
+B 836 Model Statistics    SOLVE subproblem Using LP From line 142
+B 856 Solution Report     SOLVE subproblem Using LP From line 142
+B 893 Range Statistics    SOLVE subproblem Using LP From line 142
+B 904 Model Statistics    SOLVE subproblem Using LP From line 142
+B 924 Solution Report     SOLVE subproblem Using LP From line 142
+B 961 E x e c u t i o n
+I 963 lowerbound
+I 964 upperbound
+I 966 lowerbound
+B 970 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 981 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 999 Solution Report     SOLVE masterproblem Using LP From line 160
+B 1036 E x e c u t i o n
+I 1036 ship
+I 1047 objmaster
+B 1051 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1062 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1082 Solution Report     SOLVE subproblem Using LP From line 142
+B 1119 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1130 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1150 Solution Report     SOLVE subproblem Using LP From line 142
+B 1187 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1198 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1218 Solution Report     SOLVE subproblem Using LP From line 142
+B 1255 E x e c u t i o n
+I 1257 lowerbound
+I 1258 upperbound
+I 1260 lowerbound
+B 1264 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 1275 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 1293 Solution Report     SOLVE masterproblem Using LP From line 160
+B 1330 E x e c u t i o n
+I 1330 ship
+I 1341 objmaster
+B 1345 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1356 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1376 Solution Report     SOLVE subproblem Using LP From line 142
+B 1413 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1424 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1444 Solution Report     SOLVE subproblem Using LP From line 142
+B 1481 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1492 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1512 Solution Report     SOLVE subproblem Using LP From line 142
+B 1549 E x e c u t i o n
+I 1551 lowerbound
+I 1552 upperbound
+I 1554 lowerbound
+B 1558 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 1569 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 1587 Solution Report     SOLVE masterproblem Using LP From line 160
+B 1624 E x e c u t i o n
+I 1624 ship
+I 1635 objmaster
+B 1639 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1650 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1670 Solution Report     SOLVE subproblem Using LP From line 142
+B 1707 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1718 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1738 Solution Report     SOLVE subproblem Using LP From line 142
+B 1775 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1786 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1806 Solution Report     SOLVE subproblem Using LP From line 142
+B 1843 E x e c u t i o n
+I 1845 lowerbound
+I 1846 upperbound
+I 1848 lowerbound
+B 1852 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 1863 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 1881 Solution Report     SOLVE masterproblem Using LP From line 160
+B 1918 E x e c u t i o n
+I 1918 ship
+I 1929 objmaster
+B 1933 Range Statistics    SOLVE subproblem Using LP From line 142
+B 1944 Model Statistics    SOLVE subproblem Using LP From line 142
+B 1964 Solution Report     SOLVE subproblem Using LP From line 142
+B 2001 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2012 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2032 Solution Report     SOLVE subproblem Using LP From line 142
+B 2069 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2080 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2100 Solution Report     SOLVE subproblem Using LP From line 142
+B 2137 E x e c u t i o n
+I 2139 lowerbound
+I 2140 upperbound
+I 2142 lowerbound
+B 2146 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 2157 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 2175 Solution Report     SOLVE masterproblem Using LP From line 160
+B 2212 E x e c u t i o n
+I 2212 ship
+I 2223 objmaster
+B 2227 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2238 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2258 Solution Report     SOLVE subproblem Using LP From line 142
+B 2295 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2306 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2326 Solution Report     SOLVE subproblem Using LP From line 142
+B 2363 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2374 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2394 Solution Report     SOLVE subproblem Using LP From line 142
+B 2431 E x e c u t i o n
+I 2433 lowerbound
+I 2434 upperbound
+I 2436 lowerbound
+B 2440 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 2451 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 2469 Solution Report     SOLVE masterproblem Using LP From line 160
+B 2506 E x e c u t i o n
+I 2506 ship
+I 2517 objmaster
+B 2521 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2532 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2552 Solution Report     SOLVE subproblem Using LP From line 142
+B 2589 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2600 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2620 Solution Report     SOLVE subproblem Using LP From line 142
+B 2657 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2668 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2688 Solution Report     SOLVE subproblem Using LP From line 142
+B 2725 E x e c u t i o n
+I 2727 lowerbound
+I 2728 upperbound
+I 2730 lowerbound
+B 2734 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 2745 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 2763 Solution Report     SOLVE masterproblem Using LP From line 160
+B 2800 E x e c u t i o n
+I 2800 ship
+I 2811 objmaster
+B 2815 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2826 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2846 Solution Report     SOLVE subproblem Using LP From line 142
+B 2883 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2894 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2914 Solution Report     SOLVE subproblem Using LP From line 142
+B 2951 Range Statistics    SOLVE subproblem Using LP From line 142
+B 2962 Model Statistics    SOLVE subproblem Using LP From line 142
+B 2982 Solution Report     SOLVE subproblem Using LP From line 142
+B 3019 E x e c u t i o n
+I 3021 lowerbound
+I 3022 upperbound
+I 3024 lowerbound
+B 3028 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 3039 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 3057 Solution Report     SOLVE masterproblem Using LP From line 160
+B 3094 E x e c u t i o n
+I 3094 ship
+I 3105 objmaster
+B 3109 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3120 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3140 Solution Report     SOLVE subproblem Using LP From line 142
+B 3177 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3188 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3208 Solution Report     SOLVE subproblem Using LP From line 142
+B 3245 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3256 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3276 Solution Report     SOLVE subproblem Using LP From line 142
+B 3313 E x e c u t i o n
+I 3315 lowerbound
+I 3316 upperbound
+I 3318 lowerbound
+B 3322 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 3333 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 3351 Solution Report     SOLVE masterproblem Using LP From line 160
+B 3388 E x e c u t i o n
+I 3388 ship
+I 3399 objmaster
+B 3403 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3414 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3434 Solution Report     SOLVE subproblem Using LP From line 142
+B 3471 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3482 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3502 Solution Report     SOLVE subproblem Using LP From line 142
+B 3539 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3550 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3570 Solution Report     SOLVE subproblem Using LP From line 142
+B 3607 E x e c u t i o n
+I 3609 lowerbound
+I 3610 upperbound
+I 3612 lowerbound
+B 3616 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 3627 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 3645 Solution Report     SOLVE masterproblem Using LP From line 160
+B 3682 E x e c u t i o n
+I 3682 ship
+I 3693 objmaster
+B 3697 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3708 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3728 Solution Report     SOLVE subproblem Using LP From line 142
+B 3765 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3776 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3796 Solution Report     SOLVE subproblem Using LP From line 142
+B 3833 Range Statistics    SOLVE subproblem Using LP From line 142
+B 3844 Model Statistics    SOLVE subproblem Using LP From line 142
+B 3864 Solution Report     SOLVE subproblem Using LP From line 142
+B 3901 E x e c u t i o n
+I 3903 lowerbound
+I 3904 upperbound
+I 3906 lowerbound
+B 3910 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 3921 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 3939 Solution Report     SOLVE masterproblem Using LP From line 160
+B 3976 E x e c u t i o n
+I 3976 ship
+I 3987 objmaster
+B 3991 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4002 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4022 Solution Report     SOLVE subproblem Using LP From line 142
+B 4059 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4070 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4090 Solution Report     SOLVE subproblem Using LP From line 142
+B 4127 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4138 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4158 Solution Report     SOLVE subproblem Using LP From line 142
+B 4195 E x e c u t i o n
+I 4197 lowerbound
+I 4198 upperbound
+I 4200 lowerbound
+B 4204 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 4215 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 4233 Solution Report     SOLVE masterproblem Using LP From line 160
+B 4270 E x e c u t i o n
+I 4270 ship
+I 4281 objmaster
+B 4285 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4296 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4316 Solution Report     SOLVE subproblem Using LP From line 142
+B 4353 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4364 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4384 Solution Report     SOLVE subproblem Using LP From line 142
+B 4421 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4432 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4452 Solution Report     SOLVE subproblem Using LP From line 142
+B 4489 E x e c u t i o n
+I 4491 lowerbound
+I 4492 upperbound
+I 4494 lowerbound
+B 4498 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 4509 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 4527 Solution Report     SOLVE masterproblem Using LP From line 160
+B 4564 E x e c u t i o n
+I 4564 ship
+I 4575 objmaster
+B 4579 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4590 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4610 Solution Report     SOLVE subproblem Using LP From line 142
+B 4647 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4658 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4678 Solution Report     SOLVE subproblem Using LP From line 142
+B 4715 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4726 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4746 Solution Report     SOLVE subproblem Using LP From line 142
+B 4783 E x e c u t i o n
+I 4785 lowerbound
+I 4786 upperbound
+I 4788 lowerbound
+B 4792 Range Statistics    SOLVE masterproblem Using LP From line 160
+B 4803 Model Statistics    SOLVE masterproblem Using LP From line 160
+B 4821 Solution Report     SOLVE masterproblem Using LP From line 160
+B 4858 E x e c u t i o n
+I 4858 ship
+I 4869 objmaster
+B 4873 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4884 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4904 Solution Report     SOLVE subproblem Using LP From line 142
+B 4941 Range Statistics    SOLVE subproblem Using LP From line 142
+B 4952 Model Statistics    SOLVE subproblem Using LP From line 142
+B 4972 Solution Report     SOLVE subproblem Using LP From line 142
+B 5009 Range Statistics    SOLVE subproblem Using LP From line 142
+B 5020 Model Statistics    SOLVE subproblem Using LP From line 142
+B 5040 Solution Report     SOLVE subproblem Using LP From line 142
+B 5077 E x e c u t i o n
+I 5079 lowerbound
+I 5080 upperbound
+I 5082 lowerbound
+I 5084 "Converged..."

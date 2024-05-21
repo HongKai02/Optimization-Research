@@ -1,0 +1,284 @@
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/07/24 20:05:34 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  option limrow = 0, limcol = 0;
+   2  ****************************** Data ******************************
+   3   
+   4  set scenarios /'good', 'average', 'bad'/;
+   5  set sellablecrops /'wheat', 'corn', 'sugarbeetsexp', 'sugarbeetscheap'/;
+   6  set crops /'wheat', 'corn', 'sugarbeets'/;
+   7  set cattlefeed(crops) /'wheat', 'corn' /;
+   8   
+   9  parameter alpha 'confidence level for CVaR';
+  10  alpha = [0/3];
+  11  * When alpha is 2/3, we look at the average of the worst case after that, which is just the 'bad' case. When we only look at this case, 599950 is our optimal solution, so this makes sense
+  12  * If we set aplha to be 1/3, it should look at the 2/3 tail, and the average of that should be the average of the bad and average case, but this does not seem to be the case
+  13   
+  14  parameter probability(scenarios) 'probability of each scenario materializing'
+  15  /
+  16  good [1/3],
+  17  bad [1/3],
+  18  average [1/3]
+  19  /;
+  20   
+  21  table yield(crops, scenarios)
+  22                  good    average     bad
+  23  wheat           3       2.5         2
+  24  corn            3.6     3           2.4
+  25  sugarbeets      24      20          16
+  26  ;
+  27   
+  28  parameter cost(crops) 'cost to plant per acre'
+  29  /
+  30  wheat 150,
+  31  corn 230,
+  32  sugarbeets 260
+  33  /;
+  34   
+  35  *parameter price(crops)
+  36   
+  37  positive variable x(crops) '# of acres of land to allocate to wheat, corn, and sugarbeets',
+  38                    p(sellablecrops, scenarios) '# of tons of each type of crops to sell in each scenario',
+  39                    y(cattlefeed, scenarios) '# of tons of wheat/corn to buy in each scenario',
+  40                    u(scenarios) 'auxiliar variables for reformulation of CVaR'
+  41                    ;
+  42   
+  43  variable obj, gamma;
+  44   
+  45   
+  46  ****************************** Model ******************************
+  47   
+  48   
+  49  equations objective, firstStage, wheatfeeding, cornfeeding, sellingBeets, expBeets, CVaR;
+  50   
+  51  objective..
+  52      obj =e= sum(crops, cost(crops) * x(crops)) + gamma + [1/(1-alpha)] * sum(scenarios, probability(scenarios) * u(scenarios));
+  53  *    sum(scenarios, probability(scenarios) * (238 * y('wheat', scenarios) + 210 * y('corn', scenarios) - 170 * p('wheat', scenarios) - 150 * p('corn', scenarios) - 36 * p('sugarbeetsexp', scenarios) - 10 * p('sugarbeetscheap', scenarios)));
+  54   
+  55  * Ax = b
+  56  firstStage..
+  57      sum(crops, x(crops)) =l= 500;
+  58   
+  59  *** There are equations binding the first stage variable with second stage variables ***
+  60  wheatfeeding(scenarios)..
+  61      yield('wheat', scenarios) * x('wheat') + y('wheat', scenarios) - p('wheat', scenarios) =g= 200;
+  62   
+  63  cornfeeding(scenarios)..
+  64      yield('corn', scenarios) * x('corn') + y('corn', scenarios) - p('corn', scenarios) =g= 240;
+  65   
+  66  sellingBeets(scenarios)..
+  67      p('sugarbeetsexp', scenarios) + p('sugarbeetscheap', scenarios) =l= yield('sugarbeets', scenarios) * x('sugarbeets');
+  68   
+  69  expBeets(scenarios)..
+  70      p('sugarbeetsexp', scenarios) =l= 6000;
+  71   
+  72  *** u(Omega) >= d(omega)^T y(omega) - gamma ***
+  73  CVaR(scenarios)..
+  74      u(scenarios) =g= (238 * y('wheat', scenarios) + 210 * y('corn', scenarios) - 170 * p('wheat', scenarios) - 150 * p('corn', scenarios) - 36 * p('sugarbeetsexp', scenarios) - 10 * p('sugarbeetscheap', scenarios)) - gamma
+  75   
+  76  model statisticalFarming /all/;
+  77   
+  78  solve statisticalFarming using lp min obj;
+  79   
+  80  display x.l, p.l, y.l;
+  81   
+  82   
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/07/24 20:05:34 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE statisticalFarming Using LP From line 78
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 6.000E+03] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 3.333E-01, 2.600E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/07/24 20:05:34 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE statisticalFarming Using LP From line 78
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           7     SINGLE EQUATIONS           17
+BLOCKS OF VARIABLES           6     SINGLE VARIABLES           26
+NON ZERO ELEMENTS            65
+
+
+GENERATION TIME      =        0.008 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/07/24 20:05:34 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE statisticalFarming Using LP From line 78
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   statisticalFarming   OBJECTIVE  obj
+     TYPE    LP                   DIRECTION  MINIMIZE
+     SOLVER  CPLEX                FROM LINE  78
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE          -108390.0000
+
+ RESOURCE USAGE, LIMIT          0.009 10000000000.000
+ ITERATION COUNT, LIMIT        14    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.01sec (det. 0.06 ticks)
+
+
+Optimal solution found
+Objective:      -108390.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU objective           .              .              .             1.0000      
+---- EQU firstStage        -INF          500.0000       500.0000      -275.0000      
+
+---- EQU wheatfeeding  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good          200.0000       200.0000        +INF           56.6667      
+average       200.0000       200.0000        +INF           56.6667      
+bad           200.0000       200.0000        +INF           56.6667      
+
+---- EQU cornfeeding  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good          240.0000       240.0000        +INF           50.0000      
+average       240.0000       240.0000        +INF           52.3333      
+bad           240.0000       240.0000        +INF           70.0000      
+
+---- EQU sellingBeets  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good           -INF             .              .            -4.2917      
+average        -INF             .              .           -12.0000      
+bad            -INF             .              .           -12.0000      
+
+---- EQU expBeets  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good           -INF         6000.0000      6000.0000        -7.7083      
+average        -INF         5000.0000      6000.0000          .          
+bad            -INF         4000.0000      6000.0000          .          
+
+---- EQU CVaR  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good             .              .            +INF            0.3333      
+average          .              .            +INF            0.3333      
+bad              .              .            +INF            0.3333      
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .           170.0000        +INF             .          
+corn                .            80.0000        +INF             .          
+sugarbeets          .           250.0000        +INF             .          
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                               LOWER          LEVEL          UPPER         MARGINAL
+
+wheat          .good             .           310.0000        +INF             .          
+wheat          .average          .           225.0000        +INF             .          
+wheat          .bad              .           140.0000        +INF             .          
+corn           .good             .            48.0000        +INF             .          
+corn           .average          .              .            +INF            2.3333      
+corn           .bad              .              .            +INF           20.0000      
+sugarbeetsexp  .good             .          6000.0000        +INF             .          
+sugarbeetsexp  .average          .          5000.0000        +INF             .          
+sugarbeetsexp  .bad              .          4000.0000        +INF             .          
+sugarbeetscheap.good             .              .            +INF            0.9583      
+sugarbeetscheap.average          .              .            +INF            8.6667      
+sugarbeetscheap.bad              .              .            +INF            8.6667      
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.good             .              .            +INF           22.6667      
+wheat.average          .              .            +INF           22.6667      
+wheat.bad              .              .            +INF           22.6667      
+corn .good             .              .            +INF           20.0000      
+corn .average          .              .            +INF           17.6667      
+corn .bad              .            48.0000        +INF             .          
+
+---- VAR u  auxiliar variables for reformulation of CVaR
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good             .              .            +INF      -1.11022E-16      
+average          .         57650.0000        +INF             .          
+bad              .        118180.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR obj               -INF      -108390.0000        +INF             .          
+---- VAR gamma             -INF      -275900.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/07/24 20:05:34 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----     80 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+wheat      170.000,    corn        80.000,    sugarbeets 250.000
+
+
+----     80 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                       good     average         bad
+
+wheat               310.000     225.000     140.000
+corn                 48.000
+sugarbeetsexp      6000.000    5000.000    4000.000
+
+
+----     80 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+              bad
+
+corn       48.000
+
+
+
+EXECUTION TIME       =        0.046 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVaR Farmer.gms
+Output     /Users/hongkai/Documents/GAMS/Studio/workspace/Research/CVaR Farmer.lst

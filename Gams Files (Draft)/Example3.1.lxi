@@ -1,0 +1,12 @@
+B 3 C o m p i l a t i o n
+B 41 Range Statistics    SOLVE original Using LP From line 28
+B 52 Model Statistics    SOLVE original Using LP From line 28
+B 65 Solution Report     SOLVE original Using LP From line 28
+F 98 objective
+F 99 constraint1
+F 100 constraint2
+F 101 constraint3
+F 102 constraint4
+G 106 x
+G 107 y
+G 108 obj

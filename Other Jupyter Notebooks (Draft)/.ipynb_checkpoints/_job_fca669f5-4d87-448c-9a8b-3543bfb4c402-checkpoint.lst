@@ -1,0 +1,43 @@
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:18:18 Page 16
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+GDXIN   /Users/hongkai/Desktop/Optimization/jup/_gdx_in_a7a920f3-a7f3-4377-a276-9bdae958fac4.gdx
+  46  free Variable alpha;
+--- LOAD  alpha = 1:alpha
+--- MERGE alpha = 1:alpha
+  51  execute_unload '/Users/hongkai/Desktop/Optimization/jup/_gdx_out_a7a920f3-a7f3-4377-a276-9bdae958fac4.gdx'
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:18:18 Page 17
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Include File Summary
+
+
+   SEQ   GLOBAL TYPE      PARENT   LOCAL  FILENAME
+
+     1        1 INPUT          0       0  /Users/hongkai/Desktop/Optimization/jup/_job_fca669f5-4d87-448c-9a8b-3543bfb4c402.gms
+     2       45 GDXIN          1       3  /Users/hongkai/Desktop/Optimization/jup/_gdx_in_a7a920f3-a7f3-4377-a276-9bdae958fac4.gdx
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  45.7.0 64fbf3ce DAX-DAC
+GAMS 45.7.0  64fbf3ce Jan 18, 2024          DAX-DAC arm 64bit/macOS - 03/02/24 14:18:18 Page 18
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+EXECUTION TIME       =        0.001 SECONDS      4 MB  45.7.0 64fbf3ce DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Restart    /Users/hongkai/Desktop/Optimization/jup/_save_a7a920f3-a7f3-4377-a276-9bdae958fac4.g00
+Input      /Users/hongkai/Desktop/Optimization/jup/_job_fca669f5-4d87-448c-9a8b-3543bfb4c402.gms
+Output     /Users/hongkai/Desktop/Optimization/jup/_job_fca669f5-4d87-448c-9a8b-3543bfb4c402.lst
+Save       /Users/hongkai/Desktop/Optimization/jup/_restart_a7a920f3-a7f3-4377-a276-9bdae958fac4.g00
+
+**** WARNING - COMPILER OPTIONS ARE NON DEFAULT     ONEMPTY

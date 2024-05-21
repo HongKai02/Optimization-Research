@@ -1,0 +1,235 @@
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 16:29:47 Page 1
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+C o m p i l a t i o n
+
+
+   1  option limrow = 0, limcol = 0;
+   2  ****************************** Data ******************************
+   3   
+   4  set scenarios /'good', 'average', 'bad'/;
+   5  set crops /'wheat', 'corn', 'sugarbeets'/;
+   6   
+   7   
+   8  parameter probability(scenarios) 'probability of each scenario materializing'
+   9  /
+  10  good [1/3],
+  11  bad [1/3],
+  12  average [1/3]
+  13  /;
+  14   
+  15  table yield(crops, scenarios)
+  16                  good    average     bad
+  17  wheat           3       2.5         2
+  18  corn            3.6     3           2.4
+  19  sugarbeets      24      20          16
+  20  ;
+  21   
+  22  parameter cost(crops) 'cost to plant per acre'
+  23  /
+  24  wheat 150,
+  25  corn 230,
+  26  sugarbeets 260
+  27  /;
+  28   
+  29  positive variable x(crops) '# of acres of land to allocate to wheat, corn, and sugarbeets',
+  30                    p(crops, scenarios) '# of tons of each type of crops to sell in each scenario',
+  31                    y(crops, scenarios) '# of tons of wheat/corn to buy in each scenario'
+  32                    ;
+  33   
+  34  variable obj;
+  35   
+  36  ****************************** Model ******************************
+  37   
+  38  equations objective, firstStage, wheatfeeding, cornfeeding, sellingBeets;
+  39   
+  40  objective..
+  41      obj =e= sum(crops, cost(crops) * x(crops)) + sum(scenarios, probability(scenarios) * (238 * y('wheat', scenarios) + 210 * y('corn', scenarios) - 170 * p('wheat', scenarios) - 150 * p('corn', scenarios) - 36 * p('sugarbeets', scenarios) ));
+  42   
+  43  firstStage..
+  44      sum(crops, x(crops)) =l= 500;
+  45   
+  46  wheatfeeding(scenarios)..
+  47      yield('wheat', scenarios) * x('wheat') + y('wheat', scenarios) - p('wheat', scenarios) =g= 200;
+  48   
+  49  cornfeeding(scenarios)..
+  50      yield('corn', scenarios) * x('corn') + y('corn', scenarios) - p('corn', scenarios) =g= 240;
+  51   
+  52  sellingBeets(scenarios)..
+  53      p('sugarbeets', scenarios) =l= yield('sugarbeets', scenarios) * x('sugarbeets');
+  54   
+  55   
+  56  model statisticalFarming /all/;
+  57   
+  58  solve statisticalFarming using lp min obj;
+  59   
+  60  display x.l, p.l, y.l;
+  61   
+  62   
+
+
+COMPILATION TIME     =        0.001 SECONDS      3 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 16:29:47 Page 2
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Range Statistics    SOLVE statisticalFarming Using LP From line 58
+
+
+RANGE STATISTICS (ABSOLUTE NON-ZERO FINITE VALUES)
+
+RHS       [min, max] : [ 2.000E+02, 5.000E+02] - Zero values observed as well
+Bound     [min, max] : [        NA,        NA] - Zero values observed as well
+Matrix    [min, max] : [ 1.000E+00, 2.600E+02]
+
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 16:29:47 Page 3
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Model Statistics    SOLVE statisticalFarming Using LP From line 58
+
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS           5     SINGLE EQUATIONS           11
+BLOCKS OF VARIABLES           4     SINGLE VARIABLES           19
+NON ZERO ELEMENTS            46
+
+
+GENERATION TIME      =        0.006 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 16:29:47 Page 4
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+Solution Report     SOLVE statisticalFarming Using LP From line 58
+
+
+               S O L V E      S U M M A R Y
+
+     MODEL   statisticalFarming   OBJECTIVE  obj
+     TYPE    LP                   DIRECTION  MINIMIZE
+     SOLVER  CPLEX                FROM LINE  58
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE          -132000.0000
+
+ RESOURCE USAGE, LIMIT          0.008 10000000000.000
+ ITERATION COUNT, LIMIT         0    2147483647
+--- GAMS/CPLEX Link licensed for continuous and discrete problems.
+--- GMO setup time: 0.00s
+--- GMO memory 0.50 Mb (peak 0.50 Mb)
+--- Dictionary memory 0.00 Mb
+--- Cplex 22.1.1.0 link memory 0.00 Mb (peak 0.00 Mb)
+--- Starting Cplex
+
+
+--- LP status (1): optimal.
+--- Cplex Time: 0.01sec (det. 0.01 ticks)
+
+
+Optimal solution found
+Objective:      -132000.000000
+
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- EQU objective           .              .              .             1.0000      
+---- EQU firstStage        -INF          500.0000       500.0000      -460.0000      
+
+---- EQU wheatfeeding  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good          200.0000       200.0000        +INF           79.3333      
+average       200.0000       200.0000        +INF           79.3333      
+bad           200.0000       200.0000        +INF           79.3333      
+
+---- EQU cornfeeding  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good          240.0000       240.0000        +INF           70.0000      
+average       240.0000       240.0000        +INF           70.0000      
+bad           240.0000       240.0000        +INF           70.0000      
+
+---- EQU sellingBeets  
+
+               LOWER          LEVEL          UPPER         MARGINAL
+
+good           -INF             .              .           -12.0000      
+average        -INF             .              .           -12.0000      
+bad            -INF             .              .           -12.0000      
+
+---- VAR x  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+                  LOWER          LEVEL          UPPER         MARGINAL
+
+wheat               .              .            +INF           15.0000      
+corn                .              .            +INF           60.0000      
+sugarbeets          .           500.0000        +INF             .          
+
+---- VAR p  # of tons of each type of crops to sell in each scenario
+
+                          LOWER          LEVEL          UPPER         MARGINAL
+
+wheat     .good             .              .            +INF           22.6667      
+wheat     .average          .              .            +INF           22.6667      
+wheat     .bad              .              .            +INF           22.6667      
+corn      .good             .              .            +INF           20.0000      
+corn      .average          .              .            +INF           20.0000      
+corn      .bad              .              .            +INF           20.0000      
+sugarbeets.good             .         12000.0000        +INF             .          
+sugarbeets.average          .         10000.0000        +INF             .          
+sugarbeets.bad              .          8000.0000        +INF             .          
+
+---- VAR y  # of tons of wheat/corn to buy in each scenario
+
+                     LOWER          LEVEL          UPPER         MARGINAL
+
+wheat.good             .           200.0000        +INF             .          
+wheat.average          .           200.0000        +INF             .          
+wheat.bad              .           200.0000        +INF             .          
+corn .good             .           240.0000        +INF             .          
+corn .average          .           240.0000        +INF             .          
+corn .bad              .           240.0000        +INF             .          
+
+                           LOWER          LEVEL          UPPER         MARGINAL
+
+---- VAR obj               -INF      -132000.0000        +INF             .          
+
+
+**** REPORT SUMMARY :        0     NONOPT
+                             0 INFEASIBLE
+                             0  UNBOUNDED
+GAMS 44.3.0  8b8fb1cb Sep 1, 2023           DAX-DAC arm 64bit/macOS - 05/08/24 16:29:47 Page 5
+G e n e r a l   A l g e b r a i c   M o d e l i n g   S y s t e m
+E x e c u t i o n
+
+
+----     60 VARIABLE x.L  # of acres of land to allocate to wheat, corn, and sugarbeets
+
+sugarbeets 500.000
+
+
+----     60 VARIABLE p.L  # of tons of each type of crops to sell in each scenario
+
+                  good     average         bad
+
+sugarbeets   12000.000   10000.000    8000.000
+
+
+----     60 VARIABLE y.L  # of tons of wheat/corn to buy in each scenario
+
+             good     average         bad
+
+wheat     200.000     200.000     200.000
+corn      240.000     240.000     240.000
+
+
+
+EXECUTION TIME       =        0.043 SECONDS      4 MB  44.3.0 8b8fb1cb DAX-DAC
+
+
+USER: Michael Ferris Research Group - Eval           S231231|0002AB-GEN
+      UW-Madison Computer Sciences Dept.                         DCE244
+      License for teaching and research at degree granting institutions
+
+
+**** FILE SUMMARY
+
+Input      /Users/hongkai/Documents/GAMS/Studio/workspace/Research/Stochastic Farmer Simple.gms
+Output     /Users/hongkai/Documents/GAMS/Studio/workspace/Research/Stochastic Farmer Simple.lst
